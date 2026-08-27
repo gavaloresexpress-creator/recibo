@@ -204,74 +204,75 @@ export default function Dashboard({ expenses, categories }) {
     <div className="tab-enter" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
       {/* KPI Principal com seletor de período */}
-      <div className="paper">
-        <div className="paper__inner">
-          <p className="paper__label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <Calendar size={13} /> Total do período
-          </p>
+      <div className="card" style={{ border: "1px solid rgba(230,180,74,0.3)", background: "linear-gradient(135deg, rgba(230,180,74,0.06) 0%, var(--bg-card) 100%)" }}>
+        <p className="section-title" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--gold)" }}>
+          <Calendar size={13} /> Total do período
+        </p>
 
-          {/* Atalhos rápidos */}
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
-            {presets.map((p) => (
-              <button
-                key={p.label}
-                type="button"
-                onClick={p.fn}
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 6,
-                  padding: "3px 10px",
-                  fontSize: 11,
-                  color: "var(--text-muted)",
-                  cursor: "pointer",
-                  transition: "all .15s",
-                }}
-                onMouseOver={e => e.currentTarget.style.color = "var(--gold)"}
-                onMouseOut={e => e.currentTarget.style.color = "var(--text-muted)"}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Inputs de data */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
-            <input
-              type="date"
-              className="input"
-              value={rangeStart}
-              onChange={(e) => setRangeStart(e.target.value)}
-              style={{ flex: 1, fontSize: 13, padding: "7px 10px" }}
-              aria-label="Data inicial do período"
-            />
-            <span style={{ color: "var(--text-dim)", fontSize: 12 }}>até</span>
-            <input
-              type="date"
-              className="input"
-              value={rangeEnd}
-              min={rangeStart}
-              onChange={(e) => setRangeEnd(e.target.value)}
-              style={{ flex: 1, fontSize: 13, padding: "7px 10px" }}
-              aria-label="Data final do período"
-            />
-          </div>
-
-          <p className="paper__value">{formatBRL(totalRange)}</p>
-          <p className="paper__foot" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span>{rangeEntries} compra{rangeEntries !== 1 ? "s" : ""} no período</span>
-            {deltaPercent !== null && (
-              <span style={{
-                display: "flex", alignItems: "center", gap: 3,
-                color: deltaPercent > 0 ? "#E05252" : "#3DD68C",
-                fontWeight: 600, fontSize: 12,
-              }}>
-                {deltaPercent > 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-                {deltaPercent > 0 ? "+" : ""}{deltaPercent}% vs período anterior
-              </span>
-            )}
-          </p>
+        {/* Atalhos rápidos */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+          {presets.map((p) => (
+            <button
+              key={p.label}
+              type="button"
+              onClick={p.fn}
+              style={{
+                background: "rgba(230,180,74,0.08)",
+                border: "1px solid rgba(230,180,74,0.2)",
+                borderRadius: 6,
+                padding: "3px 10px",
+                fontSize: 11,
+                color: "var(--text-muted)",
+                cursor: "pointer",
+                transition: "all .15s",
+              }}
+              onMouseOver={e => { e.currentTarget.style.color = "var(--gold)"; e.currentTarget.style.borderColor = "var(--gold)"; }}
+              onMouseOut={e => { e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.borderColor = "rgba(230,180,74,0.2)"; }}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
+
+        {/* Inputs de data */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center" }}>
+          <input
+            type="date"
+            className="input"
+            value={rangeStart}
+            onChange={(e) => setRangeStart(e.target.value)}
+            style={{ flex: 1, fontSize: 13, padding: "7px 10px" }}
+            aria-label="Data inicial do período"
+          />
+          <span style={{ color: "var(--text-dim)", fontSize: 12 }}>até</span>
+          <input
+            type="date"
+            className="input"
+            value={rangeEnd}
+            min={rangeStart}
+            onChange={(e) => setRangeEnd(e.target.value)}
+            style={{ flex: 1, fontSize: 13, padding: "7px 10px" }}
+            aria-label="Data final do período"
+          />
+        </div>
+
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Total</p>
+        <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 32, fontWeight: 700, color: "var(--gold)", letterSpacing: "-0.5px", marginBottom: 8 }}>
+          {formatBRL(totalRange)}
+        </p>
+        <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text-dim)" }}>
+          <span>{rangeEntries} compra{rangeEntries !== 1 ? "s" : ""} no período</span>
+          {deltaPercent !== null && (
+            <span style={{
+              display: "flex", alignItems: "center", gap: 3,
+              color: deltaPercent > 0 ? "#E05252" : "#3DD68C",
+              fontWeight: 600, fontSize: 12,
+            }}>
+              {deltaPercent > 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+              {deltaPercent > 0 ? "+" : ""}{deltaPercent}% vs período anterior
+            </span>
+          )}
+        </p>
       </div>
 
       {/* Stats rápidas */}

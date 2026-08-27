@@ -56,6 +56,12 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
   const [categoria, setCategoria]     = useState(categories[0]?.key || "");
   const [cartao, setCartao]           = useState(cards[0] || "");
   const [parcelas, setParcelas]       = useState(1);
+  const [mesInicioParcelas, setMesInicioParcelas] = useState(() => {
+    // Default: próximo mês
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
   const [showAddCard, setShowAddCard] = useState(false);
   const [newCard, setNewCard]         = useState("");
   const [errors, setErrors]           = useState({});
@@ -78,6 +84,11 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       setCategoria(initialExpense.categoria);
       setCartao(initialExpense.cartao);
       setParcelas(initialExpense.parcelas);
+      setMesInicioParcelas(initialExpense.mesInicioParcelas || (() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() + 1);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      })());
     }
   }, [initialExpense]);
 
@@ -113,6 +124,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       categoria,
       cartao,
       parcelas: parcelasNum,
+      mesInicioParcelas: parcelasNum > 1 ? mesInicioParcelas : null,
     });
     // Reset
     setValorMasked("");
@@ -122,6 +134,10 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
     setData(todayISO());
     setErrors({});
     setShowPreview(false);
+    // Reset mesInicioParcelas to next month
+    const nd = new Date();
+    nd.setMonth(nd.getMonth() + 1);
+    setMesInicioParcelas(`${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, "0")}`);
     onSaved();
   }
 
@@ -369,6 +385,36 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
           </div>
         )}
       </div>
+
+      {/* Mês da 1ª parcela (só aparece quando parcelado) */}
+      {parcelasNum > 1 && (
+        <div className="field">
+          <label className="field__label" htmlFor="campo-mes-inicio">
+            1ª parcela em
+            <span style={{ fontWeight: 400, color: "var(--text-dim)", fontSize: 11, marginLeft: 6 }}>
+              Ajuste se a fatura já fechou
+            </span>
+          </label>
+          <input
+            id="campo-mes-inicio"
+            type="month"
+            className="input"
+            value={mesInicioParcelas}
+            onChange={(e) => setMesInicioParcelas(e.target.value)}
+            style={{ fontSize: 14 }}
+            aria-label="Mês da primeira parcela"
+          />
+          <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 5, lineHeight: 1.5 }}>
+            Compra parcelada em {parcelasNum}x: parcelas em{" "}
+            {Array.from({ length: parcelasNum }, (_, i) => {
+              if (!mesInicioParcelas) return null;
+              const [y, m] = mesInicioParcelas.split("-").map(Number);
+              const d = new Date(y, m - 1 + i, 1);
+              return d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
+            }).join(", ")}
+          </p>
+        </div>
+      )}
 
       <div style={{ display: "flex", gap: 12 }}>
         <button

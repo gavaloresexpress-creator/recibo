@@ -49,10 +49,19 @@ export function shiftMonthKey(key, delta) {
 export function getInstallmentEntries(expense) {
   const parcelas = Math.max(1, Number(expense.parcelas) || 1);
   const valorParcela = Number(expense.valor) / parcelas;
-  const [y, m] = expense.data.split("-").map(Number);
+
+  // Usa mesInicioParcelas se definido (ex: compra feita após fechamento da fatura),
+  // caso contrário usa o mês da data da compra
+  let startY, startM;
+  if (expense.mesInicioParcelas) {
+    [startY, startM] = expense.mesInicioParcelas.split("-").map(Number);
+  } else {
+    [startY, startM] = expense.data.split("-").map(Number);
+  }
+
   const entries = [];
   for (let i = 0; i < parcelas; i++) {
-    const dt = new Date(y, m - 1 + i, 1);
+    const dt = new Date(startY, startM - 1 + i, 1);
     const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
     entries.push({
       key,
