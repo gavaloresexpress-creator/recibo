@@ -49,16 +49,41 @@ export default function Dashboard({ expenses, categories }) {
     [expenses]
   );
 
-  // ── KPI: filtra por intervalo de DATAS (usa data da compra original) ──
-  const rangeExpenses = useMemo(() => {
-    if (!rangeStart || !rangeEnd) return expenses;
-    return expenses.filter((e) => e.data >= rangeStart && e.data <= rangeEnd);
-  }, [expenses, rangeStart, rangeEnd]);
+  // ── KPI: calcula o total do período usando PARCELAS correspondentes ──
+  // Para cada mês coberto pelo range, soma as parcelas que vencem naquele mês.
+  // Assim uma compra de R$300 em 3x só conta R$100 se apenas 1 parcela cai no período.
+  const rangeStats = useMemo(() => {
+    if (!rangeStart || !rangeEnd) return { total: 0, avista: 0, parcelado: 0, numParcelas: 0, numCompras: 0 };
+    const startMonthKey = rangeStart.slice(0, 7);
+    const endMonthKey   = rangeEnd.slice(0, 7);
 
-  const totalRange = rangeExpenses.reduce((s, e) => s + e.valor, 0);
-  const rangeEntries = rangeExpenses.length;
+    let avista = 0, parcelado = 0, numParcelas = 0;
+    const comprasIds = new Set();
 
-  // Comparativo: mesmo intervalo de dias no período anterior
+    allEntries.forEach((entry) => {
+      if (entry.key < startMonthKey || entry.key > endMonthKey) return;
+      comprasIds.add(entry.id);
+      if (entry.totalInstallments > 1) {
+        parcelado   += entry.value;
+        numParcelas += 1;
+      } else {
+        avista += entry.value;
+      }
+    });
+
+    return {
+      total:       avista + parcelado,
+      avista,
+      parcelado,
+      numParcelas,
+      numCompras:  comprasIds.size,
+    };
+  }, [allEntries, rangeStart, rangeEnd]);
+
+  const { total: totalRange, avista: rangeAvista, parcelado: rangeParcelado,
+          numParcelas: rangeNumParcelas, numCompras: rangeNumCompras } = rangeStats;
+
+  // Comparativo: mesmo intervalo de meses no período anterior
   const rangeDays = useMemo(() => {
     if (!rangeStart || !rangeEnd) return 0;
     return Math.round((new Date(rangeEnd) - new Date(rangeStart)) / 86400000);
@@ -80,10 +105,12 @@ export default function Dashboard({ expenses, categories }) {
 
   const totalPrevRange = useMemo(() => {
     if (!prevRangeStart || !prevRangeEnd) return 0;
-    return expenses
-      .filter((e) => e.data >= prevRangeStart && e.data <= prevRangeEnd)
-      .reduce((s, e) => s + e.valor, 0);
-  }, [expenses, prevRangeStart, prevRangeEnd]);
+    const startKey = prevRangeStart.slice(0, 7);
+    const endKey   = prevRangeEnd.slice(0, 7);
+    return allEntries
+      .filter((e) => e.key >= startKey && e.key <= endKey)
+      .reduce((s, e) => s + e.value, 0);
+  }, [allEntries, prevRangeStart, prevRangeEnd]);
 
   const deltaPercent = totalPrevRange > 0
     ? Math.round(((totalRange - totalPrevRange) / totalPrevRange) * 100)
@@ -283,12 +310,41 @@ export default function Dashboard({ expenses, categories }) {
           />
         </div>
 
-        <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Total</p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Total do período</p>
         <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 32, fontWeight: 700, color: "var(--gold)", letterSpacing: "-0.5px", marginBottom: 8 }}>
           {formatBRL(totalRange)}
         </p>
+
+        {/* Detalhamento à vista vs parcelado */}
+        {totalRange > 0 && (
+          <div style={{ display: "flex", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+            {rangeAvista > 0 && (
+              <div style={{
+                background: "rgba(230,180,74,0.08)", border: "1px solid rgba(230,180,74,0.15)",
+                borderRadius: 8, padding: "6px 12px", fontSize: 12,
+              }}>
+                <span style={{ color: "var(--text-dim)" }}>À vista  </span>
+                <span style={{ color: "var(--gold)", fontWeight: 600, fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {formatBRL(rangeAvista)}
+                </span>
+              </div>
+            )}
+            {rangeParcelado > 0 && (
+              <div style={{
+                background: "rgba(91,141,239,0.08)", border: "1px solid rgba(91,141,239,0.2)",
+                borderRadius: 8, padding: "6px 12px", fontSize: 12,
+              }}>
+                <span style={{ color: "var(--text-dim)" }}>Parcelas ({rangeNumParcelas}x)  </span>
+                <span style={{ color: "#5B8DEF", fontWeight: 600, fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {formatBRL(rangeParcelado)}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         <p style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text-dim)" }}>
-          <span>{rangeEntries} compra{rangeEntries !== 1 ? "s" : ""} no período</span>
+          <span>{rangeNumCompras} compra{rangeNumCompras !== 1 ? "s" : ""} no período</span>
           {deltaPercent !== null && (
             <span style={{
               display: "flex", alignItems: "center", gap: 3,
