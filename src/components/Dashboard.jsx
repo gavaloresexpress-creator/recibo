@@ -49,46 +49,38 @@ export default function Dashboard({ expenses, categories }) {
     [expenses]
   );
 
-  // ── KPI: total do período com lógica híbrida ──
-  // - Compras à vista / PIX / débito: filtradas pela DATA EXATA da compra
-  // - Compras parceladas: conta a parcela cujo MÊS de vencimento está no período
+  // ── KPI: total do período ──
+  // Filtra compras pela DATA DE COMPRA dentro do período.
+  // Para parceladas: conta apenas o valor de 1 parcela (não o total da compra).
   const rangeStats = useMemo(() => {
-    if (!rangeStart || !rangeEnd) return { total: 0, avista: 0, parcelado: 0, numParcelas: 0, numCompras: 0 };
-    const startMonthKey = rangeStart.slice(0, 7);
-    const endMonthKey   = rangeEnd.slice(0, 7);
+    if (!rangeStart || !rangeEnd) return { total: 0, avista: 0, parcelado: 0, numParceladas: 0, numCompras: 0 };
 
-    let avista = 0, parcelado = 0, numParcelas = 0;
-    const comprasIds = new Set();
+    let avista = 0, parcelado = 0, numParceladas = 0;
 
-    allEntries.forEach((entry) => {
-      const isInstallment = entry.totalInstallments > 1;
+    const inRange = expenses.filter((e) => e.data >= rangeStart && e.data <= rangeEnd);
 
-      if (isInstallment) {
-        // Parcelas: verifica se o mês de vencimento cai dentro do período
-        if (entry.key < startMonthKey || entry.key > endMonthKey) return;
-        comprasIds.add(entry.id);
-        parcelado   += entry.value;
-        numParcelas += 1;
+    inRange.forEach((exp) => {
+      const parcelas = Math.max(1, Number(exp.parcelas) || 1);
+      if (parcelas > 1) {
+        parcelado    += exp.valor / parcelas; // só a parcela deste período
+        numParceladas += 1;
       } else {
-        // À vista / PIX / débito: usa a data exata da compra
-        const exp = expenses.find((e) => e.id === entry.id);
-        if (!exp || exp.data < rangeStart || exp.data > rangeEnd) return;
-        comprasIds.add(entry.id);
-        avista += entry.value;
+        avista += exp.valor;
       }
     });
 
     return {
-      total:      avista + parcelado,
+      total:        avista + parcelado,
       avista,
       parcelado,
-      numParcelas,
-      numCompras: comprasIds.size,
+      numParceladas,
+      numCompras:   inRange.length,
     };
-  }, [allEntries, expenses, rangeStart, rangeEnd]);
+  }, [expenses, rangeStart, rangeEnd]);
+
 
   const { total: totalRange, avista: rangeAvista, parcelado: rangeParcelado,
-          numParcelas: rangeNumParcelas, numCompras: rangeNumCompras } = rangeStats;
+          numParceladas: rangeNumParcelas, numCompras: rangeNumCompras } = rangeStats;
 
   // Comparativo: mesmo intervalo de meses no período anterior
   const rangeDays = useMemo(() => {
