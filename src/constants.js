@@ -14,3 +14,11 @@ export const DEFAULT_CATEGORIES = [
 export const DEFAULT_CARDS = ["Nubank", "Inter", "Itaú"];
 
 export const INSTALLMENT_OPTIONS = [1,2,3,4,5,6,7,8,9,10,11,12,18,24,36,48];
+
+export const PAYMENT_METHODS = [
+  { key: "credito",  label: "Crédito",  icon: "💳", color: "#E6B44A" },
+  { key: "pix",      label: "PIX",      icon: "⚡", color: "#3DD68C" },
+  { key: "debito",   label: "Débito",   icon: "🏦", color: "#5B8DEF" },
+  { key: "dinheiro", label: "Dinheiro", icon: "💵", color: "#84CC16" },
+];
+

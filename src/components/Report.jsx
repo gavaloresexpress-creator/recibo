@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { Trash2, Search, Download, Pencil } from "lucide-react";
+import { PAYMENT_METHODS } from "../constants";
 
 import {
   formatBRL, formatDateBR, monthKeyOf, monthLabel,
@@ -33,6 +34,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
   const [filterMonth,     setFilterMonth]     = useState("todos");
   const [filterCategoria, setFilterCategoria] = useState("todos");
   const [filterCartao,    setFilterCartao]    = useState("todos");
+  const [filterForma,     setFilterForma]     = useState("todos");
   const [search,          setSearch]          = useState("");
 
   const catByKey = useMemo(() => {
@@ -56,6 +58,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       .filter((e) => filterMonth     === "todos" || monthKeyOf(e.data) === filterMonth)
       .filter((e) => filterCategoria === "todos" || e.categoria         === filterCategoria)
       .filter((e) => filterCartao    === "todos" || e.cartao            === filterCartao)
+      .filter((e) => filterForma     === "todos" || (e.formaPagamento || "credito") === filterForma)
       .filter((e) =>
         !q ||
         e.descricao.toLowerCase().includes(q) ||
@@ -63,7 +66,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
         e.cartao.toLowerCase().includes(q)
       )
       .sort((a, b) => b.data.localeCompare(a.data));
-  }, [expenses, filterMonth, filterCategoria, filterCartao, search]);
+  }, [expenses, filterMonth, filterCategoria, filterCartao, filterForma, search]);
 
   const faturaMes = useMemo(() => {
     if (filterMonth === "todos") return null;
@@ -71,8 +74,13 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       .filter((e) => e.key         === filterMonth)
       .filter((e) => filterCategoria === "todos" || e.categoria === filterCategoria)
       .filter((e) => filterCartao    === "todos" || e.cartao    === filterCartao)
+      .filter((e) => {
+        if (filterForma === "todos") return true;
+        const exp = expenses.find(ex => ex.id === e.id);
+        return (exp?.formaPagamento || "credito") === filterForma;
+      })
       .reduce((s, e) => s + e.value, 0);
-  }, [allEntries, filterMonth, filterCategoria, filterCartao]);
+  }, [allEntries, filterMonth, filterCategoria, filterCartao, filterForma, expenses]);
 
   const totalCompras = filtered.reduce((s, e) => s + e.valor, 0);
 
@@ -141,6 +149,19 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
                 {cards.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+            <div>
+              <select
+                className="select"
+                value={filterForma}
+                onChange={(e) => setFilterForma(e.target.value)}
+                aria-label="Filtrar por forma de pagamento"
+              >
+                <option value="todos">Todas as formas</option>
+                {PAYMENT_METHODS.map((m) => (
+                  <option key={m.key} value={m.key}>{m.icon} {m.label}</option>
+                ))}
+              </select>
+            </div>
             <div style={{ display: "flex", alignItems: "center" }}>
               <button
                 className="csv-btn"
@@ -203,7 +224,14 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
                     <div className="list-row__main">
                       <div className="list-row__desc">{e.descricao}</div>
                       <div className="list-row__meta">
-                        {formatDateBR(e.data)} · {e.cartao} · {cat?.label}
+                        {formatDateBR(e.data)}
+                        {" · "}
+                        {(() => {
+                          const pm = PAYMENT_METHODS.find(m => m.key === (e.formaPagamento || "credito"));
+                          return <span style={{ color: pm?.color }}>{pm?.icon} {pm?.label}</span>;
+                        })()}
+                        {e.cartao && ` · ${e.cartao}`}
+                        {" · "}{cat?.label}
                         {e.parcelas > 1 && (
                           <span className="badge badge--parcelas" style={{ marginLeft: 6 }}>
                             {e.parcelas}x de {formatBRL(e.valor / e.parcelas)}

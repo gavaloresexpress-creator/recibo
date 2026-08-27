@@ -8,6 +8,7 @@ import { Wallet, TrendingUp, TrendingDown, CreditCard, Calendar } from "lucide-r
 import {
   formatBRL, currentMonthKey, monthLabel, shiftMonthKey, getInstallmentEntries, todayISO,
 } from "../utils/format";
+import { PAYMENT_METHODS } from "../constants";
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -104,14 +105,40 @@ export default function Dashboard({ expenses, categories }) {
       .sort((a, b) => b.value - a.value);
   }, [curEntries, catByKey]);
 
-  // Por cartão (mês atual)
+  // Por forma de pagamento (mês atual)
+  const byPaymentMethod = useMemo(() => {
+    const map = {};
+    // Crédito: usa installment entries
+    curEntries.forEach((e) => {
+      const exp = expenses.find(ex => ex.id === e.id);
+      const fp = exp?.formaPagamento || "credito";
+      map[fp] = (map[fp] || 0) + e.value;
+    });
+    // Não-crédito: gastos cujo mês da data coincide com o mês atual
+    expenses.forEach((exp) => {
+      const fp = exp.formaPagamento;
+      if (fp && fp !== "credito" && exp.data.slice(0, 7) === curKey) {
+        // Já contabilizado via installment entries acima
+      }
+    });
+    return PAYMENT_METHODS
+      .map((m) => ({ ...m, value: map[m.key] || 0 }))
+      .filter((m) => m.value > 0);
+  }, [curEntries, expenses, curKey]);
+
+  // Por cartão de crédito (mês atual)
   const byCard = useMemo(() => {
     const map = {};
-    curEntries.forEach((e) => { map[e.cartao] = (map[e.cartao] || 0) + e.value; });
+    curEntries.forEach((e) => {
+      const exp = expenses.find(ex => ex.id === e.id);
+      if ((exp?.formaPagamento || "credito") !== "credito") return;
+      if (!e.cartao) return;
+      map[e.cartao] = (map[e.cartao] || 0) + e.value;
+    });
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [curEntries]);
+  }, [curEntries, expenses]);
 
   // ── Gráfico: 4 meses anteriores + atual + 4 futuros ──
   const chartData = useMemo(() => {
@@ -422,12 +449,33 @@ export default function Dashboard({ expenses, categories }) {
         </p>
       </div>
 
-      {/* Por Cartão */}
+      {/* Por Forma de Pagamento */}
+      {byPaymentMethod.length > 0 && (
+        <div className="card">
+          <p className="section-title">Por forma de pagamento — {monthLabel(curKey)}</p>
+          {byPaymentMethod.map((m) => (
+            <div className="legend-row" key={m.key}>
+              <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{m.icon}</span>
+              <span className="legend-row__label" style={{ color: m.color, fontWeight: 600 }}>{m.label}</span>
+              <div className="legend-row__bar-wrap">
+                <div
+                  className="legend-row__bar"
+                  style={{ background: m.color, width: `${Math.round((m.value / totalMes) * 100)}%` }}
+                />
+              </div>
+              <span className="legend-row__value">{formatBRL(m.value)}</span>
+              <span className="legend-row__pct">{Math.round((m.value / totalMes) * 100)}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Por Cartão de Crédito */}
       {byCard.length > 0 && (
         <div className="card">
           <p className="section-title">
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <CreditCard size={13} /> Por cartão — {monthLabel(curKey)}
+              <CreditCard size={13} /> Por cartão de crédito — {monthLabel(curKey)}
             </span>
           </p>
           <ResponsiveContainer width="100%" height={Math.max(120, byCard.length * 50)}>

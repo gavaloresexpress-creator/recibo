@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, X, CreditCard, Eye, EyeOff } from "lucide-react";
-import { INSTALLMENT_OPTIONS } from "../constants";
+import { INSTALLMENT_OPTIONS, PAYMENT_METHODS } from "../constants";
 import {
   todayISO, formatBRL, maskCurrency, currencyToNumber,
 } from "../utils/format";
@@ -66,6 +66,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
   const [newCard, setNewCard]         = useState("");
   const [errors, setErrors]           = useState({});
   const [showPreview, setShowPreview] = useState(false);
+  const [formaPagamento, setFormaPagamento] = useState("credito");
   const [showAddCat, setShowAddCat]   = useState(false);
   const [isEditingCategories, setIsEditingCategories] = useState(false);
   const [newCatLabel, setNewCatLabel] = useState("");
@@ -84,6 +85,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       setCategoria(initialExpense.categoria);
       setCartao(initialExpense.cartao);
       setParcelas(initialExpense.parcelas);
+      setFormaPagamento(initialExpense.formaPagamento || "credito");
       setMesInicioParcelas(initialExpense.mesInicioParcelas || (() => {
         const d = new Date();
         d.setMonth(d.getMonth() + 1);
@@ -109,7 +111,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
     if (valor <= 0) errs.valor = "Informe um valor válido.";
     if (!descricao.trim()) errs.descricao = "Informe uma descrição.";
     if (!data) errs.data = "Informe a data da compra.";
-    if (!cartao) errs.cartao = "Selecione um cartão.";
+    if (formaPagamento === "credito" && !cartao) errs.cartao = "Selecione um cartão.";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -122,15 +124,17 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       descricao: descricao.trim(),
       notas: notas.trim(),
       categoria,
-      cartao,
-      parcelas: parcelasNum,
-      mesInicioParcelas: parcelasNum > 1 ? mesInicioParcelas : null,
+      cartao: formaPagamento === "credito" ? cartao : null,
+      parcelas: formaPagamento === "credito" ? parcelasNum : 1,
+      formaPagamento,
+      mesInicioParcelas: formaPagamento === "credito" && parcelasNum > 1 ? mesInicioParcelas : null,
     });
     // Reset
     setValorMasked("");
     setDescricao("");
     setNotas("");
     setParcelas(1);
+    setFormaPagamento("credito");
     setData(todayISO());
     setErrors({});
     setShowPreview(false);
@@ -193,12 +197,35 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 11, color: "var(--text-muted)" }}>
             <span>📅 {data}</span>
-            <span>💳 {cartao}</span>
+            {formaPagamento === "credito" ? (
+              <span>💳 {cartao}{parcelasNum > 1 ? ` · ${parcelasNum}x de ${formatBRL(valorParcela)}` : ""}</span>
+            ) : (
+              <span>{PAYMENT_METHODS.find(p => p.key === formaPagamento)?.icon} {PAYMENT_METHODS.find(p => p.key === formaPagamento)?.label}</span>
+            )}
             <span>🏷️ {selCat?.label}</span>
-            {parcelasNum > 1 && <span>📆 {parcelasNum}x de {formatBRL(valorParcela)}</span>}
           </div>
         </div>
       )}
+
+      {/* Forma de pagamento */}
+      <div className="field">
+        <label className="field__label">Forma de pagamento</label>
+        <div className="chip-grid">
+          {PAYMENT_METHODS.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              className={`chip${formaPagamento === m.key ? " active" : ""}`}
+              onClick={() => setFormaPagamento(m.key)}
+              style={formaPagamento === m.key ? { borderColor: m.color, color: m.color } : {}}
+              aria-pressed={formaPagamento === m.key}
+            >
+              <span className="chip__icon">{m.icon}</span>
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Valor + Data */}
       <div className="row">
@@ -319,7 +346,8 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
         </div>
       </div>
 
-      {/* Cartão */}
+      {/* Cartão — só no crédito */}
+      {formaPagamento === "credito" && (
       <div className="field">
         <label className="field__label">
           <CreditCard size={13} /> Cartão utilizado
@@ -363,8 +391,10 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
         )}
         {errors.cartao && <span className="field__error">{errors.cartao}</span>}
       </div>
+      )}
 
-      {/* Parcelas */}
+      {/* Parcelas — só no crédito */}
+      {formaPagamento === "credito" && (
       <div className="field">
         <label className="field__label" htmlFor="campo-parcelas">Número de parcelas</label>
         <select
@@ -385,9 +415,10 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
           </div>
         )}
       </div>
+      )}
 
-      {/* Mês da 1ª parcela (só aparece quando parcelado) */}
-      {parcelasNum > 1 && (
+      {/* Mês da 1ª parcela (só no crédito parcelado) */}
+      {formaPagamento === "credito" && parcelasNum > 1 && (
         <div className="field">
           <label className="field__label" htmlFor="campo-mes-inicio">
             1ª parcela em
