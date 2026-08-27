@@ -115,10 +115,10 @@ export default function App() {
 
   const userId = user?.uid ?? null;
 
-  const { expenses, cards, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard }
+  const { expenses, cards, categories, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, deleteCategory }
     = useExpenseStore(userId);
   const { budgets, setBudget }
-    = useBudgetStore(userId);
+    = useBudgetStore(userId, categories);
 
   const [tab,          setTab]          = useState("form");
   const [toast,        setToast]        = useState("");
@@ -177,9 +177,12 @@ export default function App() {
             {tab === "form" && (
               <ExpenseForm
                 cards={cards}
+                categories={categories}
                 expenses={expenses}
                 onAdd={editTarget ? (data) => updateExpense(editTarget.id, data) : addExpense}
                 onAddCard={addCard}
+                addCategory={addCategory}
+                deleteCategory={deleteCategory}
                 onSaved={handleSaved}
                 initialExpense={editTarget}
                 onCancelEdit={() => {
@@ -189,12 +192,13 @@ export default function App() {
               />
             )}
             {tab === "dashboard" && (
-              <Dashboard expenses={expenses} />
+              <Dashboard expenses={expenses} categories={categories} />
             )}
             {tab === "report" && (
               <Report
                 expenses={expenses}
                 cards={cards}
+                categories={categories}
                 onDeleteRequest={handleDeleteRequest}
                 onEditRequest={handleEditRequest}
               />
@@ -204,6 +208,7 @@ export default function App() {
                 budgets={budgets}
                 setBudget={setBudget}
                 expenses={expenses}
+                categories={categories}
               />
             )}
           </>

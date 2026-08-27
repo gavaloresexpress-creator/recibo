@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { CATEGORIES } from "../constants";
+
 import { formatBRL, currentMonthKey, getInstallmentEntries } from "../utils/format";
 import { maskCurrency, currencyToNumber } from "../utils/format";
 
@@ -77,7 +77,7 @@ function BudgetRow({ cat, budget, spent, onSave }) {
   );
 }
 
-export default function BudgetManager({ budgets, setBudget, expenses }) {
+export default function BudgetManager({ budgets, setBudget, expenses, categories }) {
   const curKey = currentMonthKey();
 
   const spentByCategory = useMemo(() => {
@@ -109,7 +109,7 @@ export default function BudgetManager({ budgets, setBudget, expenses }) {
         <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16, lineHeight: 1.5 }}>
           Defina um limite mensal para cada categoria. A barra de progresso indica quanto você já gastou.
         </p>
-        {CATEGORIES.map((cat) => (
+        {categories.map((cat) => (
           <BudgetRow
             key={cat.key}
             cat={cat}

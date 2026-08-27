@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, X, CreditCard, Eye, EyeOff } from "lucide-react";
-import { CATEGORIES, INSTALLMENT_OPTIONS } from "../constants";
+import { INSTALLMENT_OPTIONS } from "../constants";
 import {
   todayISO, formatBRL, maskCurrency, currencyToNumber,
 } from "../utils/format";
@@ -48,18 +48,23 @@ function AutocompleteInput({ value, onChange, suggestions, placeholder, classNam
   );
 }
 
-export default function ExpenseForm({ cards, expenses, onAdd, onAddCard, onSaved, initialExpense, onCancelEdit }) {
+export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddCard, addCategory, deleteCategory, onSaved, initialExpense, onCancelEdit }) {
   const [valorMasked, setValorMasked] = useState("");
   const [data, setData]               = useState(todayISO());
   const [descricao, setDescricao]     = useState("");
   const [notas, setNotas]             = useState("");
-  const [categoria, setCategoria]     = useState(CATEGORIES[0].key);
+  const [categoria, setCategoria]     = useState(categories[0]?.key || "");
   const [cartao, setCartao]           = useState(cards[0] || "");
   const [parcelas, setParcelas]       = useState(1);
   const [showAddCard, setShowAddCard] = useState(false);
   const [newCard, setNewCard]         = useState("");
   const [errors, setErrors]           = useState({});
   const [showPreview, setShowPreview] = useState(false);
+  const [showAddCat, setShowAddCat]   = useState(false);
+  const [isEditingCategories, setIsEditingCategories] = useState(false);
+  const [newCatLabel, setNewCatLabel] = useState("");
+  const [newCatIcon, setNewCatIcon]   = useState("");
+  const [newCatColor, setNewCatColor] = useState("#8B5CF6");
 
   // Histórico de descrições para autocomplete
   const descHistory = [...new Set(expenses.map((e) => e.descricao))];
@@ -128,7 +133,7 @@ export default function ExpenseForm({ cards, expenses, onAdd, onAddCard, onSaved
     setShowAddCard(false);
   }
 
-  const selCat = CATEGORIES.find((c) => c.key === categoria);
+  const selCat = categories.find((c) => c.key === categoria);
 
   return (
     <div className="card tab-enter">
@@ -234,19 +239,66 @@ export default function ExpenseForm({ cards, expenses, onAdd, onAddCard, onSaved
 
       {/* Categoria */}
       <div className="field">
-        <label className="field__label">Categoria</label>
-        <div className="chip-grid">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              className={`chip${categoria === c.key ? " active" : ""}`}
-              onClick={() => setCategoria(c.key)}
-              aria-pressed={categoria === c.key}
-            >
-              <span className="chip__icon">{c.icon}</span>
-              {c.label}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <label className="field__label" style={{ marginBottom: 0 }}>Categoria</label>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button type="button" style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }} onClick={() => setIsEditingCategories(!isEditingCategories)}>
+              {isEditingCategories ? "Concluído" : "Apagar..."}
             </button>
+            <button type="button" style={{ background: "none", border: "none", color: "var(--gold)", fontSize: 12, cursor: "pointer" }} onClick={() => setShowAddCat(!showAddCat)}>
+              {showAddCat ? "Cancelar" : "+ Nova"}
+            </button>
+          </div>
+        </div>
+
+        {showAddCat && (
+          <div style={{ padding: 12, background: "rgba(0,0,0,0.1)", borderRadius: 8, marginBottom: 12, border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input className="input" placeholder="Nome (Ex: Pet)" value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} style={{ flex: 1 }} />
+              <input className="input" placeholder="Ícone (Ex: 🐶)" value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)} style={{ width: 90 }} />
+              <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)} style={{ width: 44, height: 44, padding: 0, border: "none", borderRadius: 8, cursor: "pointer", background: "none" }} title="Cor da categoria" />
+            </div>
+            <button type="button" className="btn-primary" style={{ padding: "8px 12px", fontSize: 12, width: "100%" }} onClick={() => {
+              if (newCatLabel.trim()) {
+                const key = newCatLabel.trim().toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now();
+                addCategory({ key, label: newCatLabel.trim(), icon: newCatIcon || "🏷️", color: newCatColor });
+                setShowAddCat(false);
+                setNewCatLabel("");
+                setNewCatIcon("");
+                setCategoria(key);
+              }
+            }}>Salvar Categoria</button>
+          </div>
+        )}
+
+        <div className="chip-grid">
+          {categories.map((c) => (
+            <div key={c.key} style={{ position: "relative", display: "inline-block" }}>
+              <button
+                type="button"
+                className={`chip${categoria === c.key && !isEditingCategories ? " active" : ""}`}
+                onClick={() => {
+                  if (isEditingCategories) {
+                    if (window.confirm(`Tem certeza que deseja apagar a categoria ${c.label}?`)) {
+                      deleteCategory(c.key);
+                      if (categoria === c.key) setCategoria(categories[0]?.key);
+                    }
+                  } else {
+                    setCategoria(c.key);
+                  }
+                }}
+                style={isEditingCategories ? { border: "1px dashed var(--rust)", opacity: 0.8, color: "var(--rust)" } : {}}
+                aria-pressed={categoria === c.key}
+              >
+                <span className="chip__icon">{c.icon}</span>
+                {c.label}
+              </button>
+              {isEditingCategories && (
+                <div style={{ position: "absolute", top: -5, right: -5, background: "var(--rust)", color: "#fff", borderRadius: "50%", width: 16, height: 16, fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                  <X size={10} strokeWidth={3} />
+                </div>
+              )}
+            </div>
           ))}
         </div>
       </div>

@@ -1,12 +1,13 @@
 import { useMemo, useState, useCallback } from "react";
 import { Trash2, Search, Download, Pencil } from "lucide-react";
-import { CATEGORIES, catByKey } from "../constants";
+
 import {
   formatBRL, formatDateBR, monthKeyOf, monthLabel,
   getInstallmentEntries,
 } from "../utils/format";
 
-function exportCSV(data) {
+function exportCSV(data, categories) {
+  const catByKey = Object.fromEntries(categories.map((c) => [c.key, c]));
   const headers = ["Data", "Descrição", "Categoria", "Cartão", "Parcelas", "Valor Total", "Valor Parcela", "Notas"];
   const rows = data.map((e) => [
     formatDateBR(e.data),
@@ -28,11 +29,15 @@ function exportCSV(data) {
   URL.revokeObjectURL(url);
 }
 
-export default function Report({ expenses, cards, onDeleteRequest, onEditRequest }) {
+export default function Report({ expenses, cards, categories, onDeleteRequest, onEditRequest }) {
   const [filterMonth,     setFilterMonth]     = useState("todos");
   const [filterCategoria, setFilterCategoria] = useState("todos");
   const [filterCartao,    setFilterCartao]    = useState("todos");
   const [search,          setSearch]          = useState("");
+
+  const catByKey = useMemo(() => {
+    return Object.fromEntries(categories.map((c) => [c.key, c]));
+  }, [categories]);
 
   const allEntries = useMemo(
     () => expenses.flatMap((e) => getInstallmentEntries(e)),
@@ -77,7 +82,7 @@ export default function Report({ expenses, cards, onDeleteRequest, onEditRequest
     return Object.entries(map)
       .map(([key, value]) => ({ key, value, ...catByKey[key] }))
       .sort((a, b) => b.value - a.value);
-  }, [filtered]);
+  }, [filtered, catByKey]);
 
   return (
     <div className="tab-enter" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -118,7 +123,7 @@ export default function Report({ expenses, cards, onDeleteRequest, onEditRequest
                 aria-label="Filtrar por categoria"
               >
                 <option value="todos">Todas categorias</option>
-                {CATEGORIES.map((c) => (
+                {categories.map((c) => (
                   <option key={c.key} value={c.key}>{c.icon} {c.label}</option>
                 ))}
               </select>
@@ -139,7 +144,7 @@ export default function Report({ expenses, cards, onDeleteRequest, onEditRequest
             <div style={{ display: "flex", alignItems: "center" }}>
               <button
                 className="csv-btn"
-                onClick={() => exportCSV(filtered)}
+                onClick={() => exportCSV(filtered, categories)}
                 disabled={filtered.length === 0}
                 title="Exportar CSV"
                 id="btn-exportar-csv"

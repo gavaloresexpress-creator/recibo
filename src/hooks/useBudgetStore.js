@@ -1,19 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import { CATEGORIES } from "../constants";
-
-const DEFAULT_BUDGETS = Object.fromEntries(CATEGORIES.map((c) => [c.key, 0]));
 
 const budgetsDoc = (uid) => doc(db, "users", uid, "meta", "budgets");
 
-export function useBudgetStore(userId) {
-  const [budgets, setBudgets] = useState(DEFAULT_BUDGETS);
+export function useBudgetStore(userId, categories = []) {
+  const defaultBudgets = useMemo(() => {
+    return Object.fromEntries(categories.map((c) => [c.key, 0]));
+  }, [categories]);
+
+  const [budgets, setBudgets] = useState(defaultBudgets);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!userId) {
-      setBudgets(DEFAULT_BUDGETS);
+      setBudgets(defaultBudgets);
       setLoading(false);
       return;
     }
@@ -21,7 +22,9 @@ export function useBudgetStore(userId) {
     setLoading(true);
     const unsub = onSnapshot(budgetsDoc(userId), (snap) => {
       if (snap.exists()) {
-        setBudgets({ ...DEFAULT_BUDGETS, ...snap.data() });
+        setBudgets({ ...defaultBudgets, ...snap.data() });
+      } else {
+        setBudgets(defaultBudgets);
       }
       setLoading(false);
     }, (err) => {
@@ -30,7 +33,7 @@ export function useBudgetStore(userId) {
     });
 
     return unsub;
-  }, [userId]);
+  }, [userId, defaultBudgets]);
 
   const setBudget = useCallback(async (categoryKey, amount) => {
     if (!userId) return;

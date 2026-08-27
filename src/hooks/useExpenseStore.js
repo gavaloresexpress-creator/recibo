@@ -6,17 +6,19 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { uid } from "../utils/format";
-import { DEFAULT_CARDS } from "../constants";
+import { DEFAULT_CARDS, DEFAULT_CATEGORIES } from "../constants";
 
 // ─────────────────────────────────────────────────────────────
 //  Helpers de coleção por usuário
 // ─────────────────────────────────────────────────────────────
 const expensesCol = (uid) => collection(db, "users", uid, "expenses");
 const cardsDoc    = (uid) => doc(db, "users", uid, "meta", "cards");
+const categoriesDoc = (uid) => doc(db, "users", uid, "meta", "categories");
 
 export function useExpenseStore(userId) {
   const [expenses, setExpenses] = useState([]);
   const [cards,    setCards]    = useState(DEFAULT_CARDS);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [loading,  setLoading]  = useState(true);
 
   // Guarda referências aos unsubscribers para limpeza
@@ -27,6 +29,7 @@ export function useExpenseStore(userId) {
     if (!userId) {
       setExpenses([]);
       setCards(DEFAULT_CARDS);
+      setCategories(DEFAULT_CATEGORIES);
       setLoading(false);
       return;
     }
@@ -36,6 +39,11 @@ export function useExpenseStore(userId) {
     // Carrega cartões (documento único)
     getDoc(cardsDoc(userId)).then((snap) => {
       if (snap.exists()) setCards(snap.data().list || DEFAULT_CARDS);
+    });
+
+    // Carrega categorias (documento único)
+    getDoc(categoriesDoc(userId)).then((snap) => {
+      if (snap.exists()) setCategories(snap.data().list || DEFAULT_CATEGORIES);
     });
 
     // Observa gastos em tempo real
@@ -118,5 +126,29 @@ export function useExpenseStore(userId) {
     }
   }, [userId, cards]);
 
-  return { expenses, cards, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard };
+  // ── Adicionar Categoria ────────────────────────────────────────
+  const addCategory = useCallback(async (catObj) => {
+    if (!userId) return;
+    const newList = [...categories, catObj];
+    setCategories(newList);
+    try {
+      await setDoc(categoriesDoc(userId), { list: newList }, { merge: true });
+    } catch (err) {
+      console.error("addCategory error:", err);
+    }
+  }, [userId, categories]);
+
+  // ── Remover Categoria ──────────────────────────────────────────
+  const deleteCategory = useCallback(async (key) => {
+    if (!userId) return;
+    const newList = categories.filter((c) => c.key !== key);
+    setCategories(newList);
+    try {
+      await setDoc(categoriesDoc(userId), { list: newList }, { merge: true });
+    } catch (err) {
+      console.error("deleteCategory error:", err);
+    }
+  }, [userId, categories]);
+
+  return { expenses, cards, categories, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, deleteCategory };
 }

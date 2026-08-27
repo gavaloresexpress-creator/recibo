@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart,
 } from "recharts";
 import { Wallet, TrendingUp, TrendingDown, CreditCard } from "lucide-react";
-import { catByKey, CATEGORIES } from "../constants";
+
 import {
   formatBRL, currentMonthKey, monthLabel, shiftMonthKey, getInstallmentEntries,
 } from "../utils/format";
@@ -19,8 +19,13 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-export default function Dashboard({ expenses }) {
+export default function Dashboard({ expenses, categories }) {
   const curKey = currentMonthKey();
+
+  const catByKey = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.key, c])),
+    [categories]
+  );
 
   const allEntries = useMemo(
     () => expenses.flatMap((e) => getInstallmentEntries(e)),
