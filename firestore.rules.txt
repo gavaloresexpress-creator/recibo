@@ -1,0 +1,27 @@
+// ─────────────────────────────────────────────────────────────
+//  Firestore Security Rules — Recibo App
+//  Cole estas regras em: Firebase Console → Firestore → Regras
+// ─────────────────────────────────────────────────────────────
+//
+//  ATENÇÃO: O banco foi criado em "modo produção", então as leituras
+//  e gravações estão BLOQUEADAS por padrão. Use as regras abaixo.
+//
+// rules_version = '2';
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//
+//     // Cada usuário só pode ler/gravar seus próprios dados
+//     match /users/{userId}/{document=**} {
+//       allow read, write: if request.auth != null
+//                          && request.auth.uid == userId;
+//     }
+//   }
+// }
+//
+// ─────────────────────────────────────────────────────────────
+//  Como aplicar:
+//  1. Acesse console.firebase.google.com → seu projeto
+//  2. Firestore Database → aba "Regras"
+//  3. Substitua o conteúdo pelo bloco acima (sem os comentários //)
+//  4. Clique em "Publicar"
+// ─────────────────────────────────────────────────────────────

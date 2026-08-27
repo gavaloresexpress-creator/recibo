@@ -1,0 +1,23 @@
+# Dependências
+node_modules/
+.npm
+
+# Build
+dist/
+dist-ssr/
+
+# Env — NUNCA commite seus segredos do Firebase!
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
