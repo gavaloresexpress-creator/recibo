@@ -1,12 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   PieChart, Pie, Cell, BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart, ReferenceLine,
 } from "recharts";
-import { Wallet, TrendingUp, TrendingDown, CreditCard } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, CreditCard, Calendar } from "lucide-react";
 
 import {
-  formatBRL, currentMonthKey, monthLabel, shiftMonthKey, getInstallmentEntries,
+  formatBRL, currentMonthKey, monthLabel, shiftMonthKey, getInstallmentEntries, todayISO,
 } from "../utils/format";
 
 function CustomTooltip({ active, payload, label }) {
@@ -15,12 +15,28 @@ function CustomTooltip({ active, payload, label }) {
     <div className="chart-tooltip">
       {label && <div className="chart-tooltip__label">{label}</div>}
       <div className="chart-tooltip__value">{formatBRL(payload[0].value)}</div>
+      {payload[1] && payload[1].value > 0 && (
+        <div style={{ fontSize: 11, color: "#7A8AAD", marginTop: 2 }}>
+          Projeção: {formatBRL(payload[1].value)}
+        </div>
+      )}
     </div>
   );
 }
 
+// Primeiro dia do mês atual em formato ISO
+function firstOfCurrentMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
 export default function Dashboard({ expenses, categories }) {
   const curKey = currentMonthKey();
+  const today = todayISO();
+
+  // --- Estado do seletor de período ---
+  const [rangeStart, setRangeStart] = useState(firstOfCurrentMonth());
+  const [rangeEnd,   setRangeEnd]   = useState(today);
 
   const catByKey = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.key, c])),
@@ -32,20 +48,52 @@ export default function Dashboard({ expenses, categories }) {
     [expenses]
   );
 
+  // ── KPI: filtra por intervalo de DATAS (usa data da compra original) ──
+  const rangeExpenses = useMemo(() => {
+    if (!rangeStart || !rangeEnd) return expenses;
+    return expenses.filter((e) => e.data >= rangeStart && e.data <= rangeEnd);
+  }, [expenses, rangeStart, rangeEnd]);
+
+  const totalRange = rangeExpenses.reduce((s, e) => s + e.valor, 0);
+  const rangeEntries = rangeExpenses.length;
+
+  // Comparativo: mesmo intervalo de dias no período anterior
+  const rangeDays = useMemo(() => {
+    if (!rangeStart || !rangeEnd) return 0;
+    return Math.round((new Date(rangeEnd) - new Date(rangeStart)) / 86400000);
+  }, [rangeStart, rangeEnd]);
+
+  const prevRangeStart = useMemo(() => {
+    if (!rangeStart) return null;
+    const d = new Date(rangeStart);
+    d.setDate(d.getDate() - (rangeDays + 1));
+    return d.toISOString().slice(0, 10);
+  }, [rangeStart, rangeDays]);
+
+  const prevRangeEnd = useMemo(() => {
+    if (!rangeStart) return null;
+    const d = new Date(rangeStart);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }, [rangeStart]);
+
+  const totalPrevRange = useMemo(() => {
+    if (!prevRangeStart || !prevRangeEnd) return 0;
+    return expenses
+      .filter((e) => e.data >= prevRangeStart && e.data <= prevRangeEnd)
+      .reduce((s, e) => s + e.valor, 0);
+  }, [expenses, prevRangeStart, prevRangeEnd]);
+
+  const deltaPercent = totalPrevRange > 0
+    ? Math.round(((totalRange - totalPrevRange) / totalPrevRange) * 100)
+    : null;
+
+  // ── Mês atual para gráfico de pizza e cartões ──
   const curEntries = useMemo(
     () => allEntries.filter((e) => e.key === curKey),
     [allEntries, curKey]
   );
-
   const totalMes = curEntries.reduce((s, e) => s + e.value, 0);
-
-  // Mês anterior para comparação
-  const prevKey = shiftMonthKey(curKey, -1);
-  const prevEntries = allEntries.filter((e) => e.key === prevKey);
-  const totalPrev = prevEntries.reduce((s, e) => s + e.value, 0);
-  const deltaPercent = totalPrev > 0
-    ? Math.round(((totalMes - totalPrev) / totalPrev) * 100)
-    : null;
 
   // Por categoria (mês atual)
   const byCategory = useMemo(() => {
@@ -54,7 +102,7 @@ export default function Dashboard({ expenses, categories }) {
     return Object.entries(map)
       .map(([key, value]) => ({ key, value, ...catByKey[key] }))
       .sort((a, b) => b.value - a.value);
-  }, [curEntries]);
+  }, [curEntries, catByKey]);
 
   // Por cartão (mês atual)
   const byCard = useMemo(() => {
@@ -65,15 +113,26 @@ export default function Dashboard({ expenses, categories }) {
       .sort((a, b) => b.value - a.value);
   }, [curEntries]);
 
-  // Últimos 6 meses
-  const last6 = useMemo(() => {
+  // ── Gráfico: 4 meses anteriores + atual + 4 futuros ──
+  const chartData = useMemo(() => {
     const keys = [];
-    for (let i = 5; i >= 0; i--) keys.push(shiftMonthKey(curKey, -i));
-    return keys.map((key) => ({
-      key,
-      label: monthLabel(key),
-      total: allEntries.filter((e) => e.key === key).reduce((s, e) => s + e.value, 0),
-    }));
+    for (let i = -4; i <= 4; i++) keys.push(shiftMonthKey(curKey, i));
+    return keys.map((key) => {
+      const isFuture = key > curKey;
+      const isCurrent = key === curKey;
+      const total = allEntries
+        .filter((e) => e.key === key)
+        .reduce((s, e) => s + e.value, 0);
+      return {
+        key,
+        label: monthLabel(key),
+        realizado: isFuture ? 0 : total,
+        projecao: isFuture ? total : 0,
+        isFuture,
+        isCurrent,
+        total, // para tooltip
+      };
+    });
   }, [allEntries, curKey]);
 
   // Últimas 5 compras
@@ -87,6 +146,47 @@ export default function Dashboard({ expenses, categories }) {
     ? expenses.reduce((s, e) => s + e.valor, 0) / expenses.length
     : 0;
   const topCategory = byCategory[0];
+
+  // Atalhos de período
+  const presets = [
+    {
+      label: "Hoje",
+      fn: () => { setRangeStart(today); setRangeEnd(today); },
+    },
+    {
+      label: "Esta semana",
+      fn: () => {
+        const d = new Date();
+        const day = d.getDay();
+        const monday = new Date(d);
+        monday.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+        setRangeStart(monday.toISOString().slice(0, 10));
+        setRangeEnd(today);
+      },
+    },
+    {
+      label: "Este mês",
+      fn: () => { setRangeStart(firstOfCurrentMonth()); setRangeEnd(today); },
+    },
+    {
+      label: "Últ. 30 dias",
+      fn: () => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        setRangeStart(d.toISOString().slice(0, 10));
+        setRangeEnd(today);
+      },
+    },
+    {
+      label: "Últ. 3 meses",
+      fn: () => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 3);
+        setRangeStart(d.toISOString().slice(0, 10));
+        setRangeEnd(today);
+      },
+    },
+  ];
 
   if (expenses.length === 0) {
     return (
@@ -102,13 +202,64 @@ export default function Dashboard({ expenses, categories }) {
 
   return (
     <div className="tab-enter" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* KPI Principal */}
+
+      {/* KPI Principal com seletor de período */}
       <div className="paper">
         <div className="paper__inner">
-          <p className="paper__label">Total do mês · {monthLabel(curKey)}</p>
-          <p className="paper__value">{formatBRL(totalMes)}</p>
+          <p className="paper__label" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Calendar size={13} /> Total do período
+          </p>
+
+          {/* Atalhos rápidos */}
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+            {presets.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={p.fn}
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 6,
+                  padding: "3px 10px",
+                  fontSize: 11,
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  transition: "all .15s",
+                }}
+                onMouseOver={e => e.currentTarget.style.color = "var(--gold)"}
+                onMouseOut={e => e.currentTarget.style.color = "var(--text-muted)"}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Inputs de data */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
+            <input
+              type="date"
+              className="input"
+              value={rangeStart}
+              onChange={(e) => setRangeStart(e.target.value)}
+              style={{ flex: 1, fontSize: 13, padding: "7px 10px" }}
+              aria-label="Data inicial do período"
+            />
+            <span style={{ color: "var(--text-dim)", fontSize: 12 }}>até</span>
+            <input
+              type="date"
+              className="input"
+              value={rangeEnd}
+              min={rangeStart}
+              onChange={(e) => setRangeEnd(e.target.value)}
+              style={{ flex: 1, fontSize: 13, padding: "7px 10px" }}
+              aria-label="Data final do período"
+            />
+          </div>
+
+          <p className="paper__value">{formatBRL(totalRange)}</p>
           <p className="paper__foot" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span>{curEntries.length} lançamento{curEntries.length !== 1 ? "s" : ""} (incl. parcelas anteriores)</span>
+            <span>{rangeEntries} compra{rangeEntries !== 1 ? "s" : ""} no período</span>
             {deltaPercent !== null && (
               <span style={{
                 display: "flex", alignItems: "center", gap: 3,
@@ -116,7 +267,7 @@ export default function Dashboard({ expenses, categories }) {
                 fontWeight: 600, fontSize: 12,
               }}>
                 {deltaPercent > 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-                {deltaPercent > 0 ? "+" : ""}{deltaPercent}% vs mês anterior
+                {deltaPercent > 0 ? "+" : ""}{deltaPercent}% vs período anterior
               </span>
             )}
           </p>
@@ -153,7 +304,7 @@ export default function Dashboard({ expenses, categories }) {
         )}
       </div>
 
-      {/* Pie Chart — Categorias */}
+      {/* Pie Chart — Categorias (mês atual) */}
       {byCategory.length > 0 && (
         <div className="card">
           <p className="section-title">Gastos por categoria — {monthLabel(curKey)}</p>
@@ -192,15 +343,35 @@ export default function Dashboard({ expenses, categories }) {
         </div>
       )}
 
-      {/* Bar Chart — 6 meses com linha de tendência */}
+      {/* Bar Chart — evolução + projeção futura */}
       <div className="card">
-        <p className="section-title">Evolução mensal — 6 meses</p>
-        <ResponsiveContainer width="100%" height={190}>
-          <ComposedChart data={last6} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <p className="section-title" style={{ marginBottom: 0 }}>Evolução mensal</p>
+          <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--text-dim)" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: "#E6B44A", display: "inline-block" }} />
+              Realizado
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: "#5B8DEF", display: "inline-block", opacity: 0.6 }} />
+              Projeção
+            </span>
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={210}>
+          <ComposedChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#2A3550" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fill: "#7A8AAD", fontSize: 11 }}
+              tick={({ x, y, payload, index }) => {
+                const item = chartData[index];
+                const fill = item?.isFuture ? "#5B8DEF" : item?.isCurrent ? "#E6B44A" : "#7A8AAD";
+                return (
+                  <text x={x} y={y + 12} textAnchor="middle" fill={fill} fontSize={10}>
+                    {payload.value}
+                  </text>
+                );
+              }}
               axisLine={{ stroke: "#2A3550" }}
               tickLine={false}
             />
@@ -211,11 +382,33 @@ export default function Dashboard({ expenses, categories }) {
               tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
               width={38}
             />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="total" fill="#E6B44A" radius={[5, 5, 0, 0]} opacity={0.85} />
+            <Tooltip
+              content={({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                const realizado = payload.find(p => p.dataKey === "realizado")?.value || 0;
+                const projecao  = payload.find(p => p.dataKey === "projecao")?.value || 0;
+                return (
+                  <div className="chart-tooltip">
+                    <div className="chart-tooltip__label">{label}</div>
+                    {realizado > 0 && (
+                      <div className="chart-tooltip__value">{formatBRL(realizado)}</div>
+                    )}
+                    {projecao > 0 && (
+                      <div style={{ fontSize: 12, color: "#5B8DEF", marginTop: 2 }}>
+                        Projeção: {formatBRL(projecao)}
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
+            />
+            {/* Linha divisória: hoje */}
+            <ReferenceLine x={monthLabel(curKey)} stroke="#E6B44A" strokeDasharray="4 3" strokeWidth={1.5} />
+            <Bar dataKey="realizado" fill="#E6B44A" radius={[5, 5, 0, 0]} opacity={0.85} />
+            <Bar dataKey="projecao"  fill="#5B8DEF" radius={[5, 5, 0, 0]} opacity={0.55} />
             <Line
               type="monotone"
-              dataKey="total"
+              dataKey="realizado"
               stroke="#F5D07A"
               strokeWidth={2}
               dot={{ fill: "#F5D07A", r: 3, strokeWidth: 0 }}
@@ -223,6 +416,9 @@ export default function Dashboard({ expenses, categories }) {
             />
           </ComposedChart>
         </ResponsiveContainer>
+        <p style={{ fontSize: 11, color: "var(--text-dim)", textAlign: "center", marginTop: 4 }}>
+          Barras azuis = projeção de parcelas futuras
+        </p>
       </div>
 
       {/* Por Cartão */}
