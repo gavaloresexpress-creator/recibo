@@ -14,11 +14,19 @@ import { DEFAULT_CARDS, DEFAULT_CATEGORIES } from "../constants";
 const expensesCol = (uid) => collection(db, "users", uid, "expenses");
 const cardsDoc    = (uid) => doc(db, "users", uid, "meta", "cards");
 const categoriesDoc = (uid) => doc(db, "users", uid, "meta", "categories");
+const splitterDoc   = (uid) => doc(db, "users", uid, "meta", "splitter");
+
+const DEFAULT_SPLITTER = [
+  { id: "1", label: "Gastos Essenciais", percent: 50, color: "#5B8DEF" },
+  { id: "2", label: "Estilo de Vida", percent: 30, color: "#E6B44A" },
+  { id: "3", label: "Investimentos", percent: 20, color: "#3DD68C" },
+];
 
 export function useExpenseStore(userId) {
   const [expenses, setExpenses] = useState([]);
   const [cards,    setCards]    = useState(DEFAULT_CARDS);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [splitterEnvelopes, setSplitterEnvelopes] = useState(DEFAULT_SPLITTER);
   const [loading,  setLoading]  = useState(true);
 
   // Guarda referências aos unsubscribers para limpeza
@@ -30,6 +38,7 @@ export function useExpenseStore(userId) {
       setExpenses([]);
       setCards(DEFAULT_CARDS);
       setCategories(DEFAULT_CATEGORIES);
+      setSplitterEnvelopes(DEFAULT_SPLITTER);
       setLoading(false);
       return;
     }
@@ -55,6 +64,15 @@ export function useExpenseStore(userId) {
         setCategories(merged);
       } else {
         setCategories(DEFAULT_CATEGORIES);
+      }
+    });
+
+    // Carrega envelopes do splitter (documento único)
+    getDoc(splitterDoc(userId)).then((snap) => {
+      if (snap.exists()) {
+        setSplitterEnvelopes(snap.data().list || DEFAULT_SPLITTER);
+      } else {
+        setSplitterEnvelopes(DEFAULT_SPLITTER);
       }
     });
 
@@ -174,5 +192,16 @@ export function useExpenseStore(userId) {
     }
   }, [userId, categories]);
 
-  return { expenses, cards, categories, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, updateCategory, deleteCategory };
+  // ── Atualizar Splitter ──────────────────────────────────────────
+  const updateSplitterEnvelopes = useCallback(async (newEnvelopes) => {
+    if (!userId) return;
+    setSplitterEnvelopes(newEnvelopes);
+    try {
+      await setDoc(splitterDoc(userId), { list: newEnvelopes }, { merge: true });
+    } catch (err) {
+      console.error("updateSplitter error:", err);
+    }
+  }, [userId]);
+
+  return { expenses, cards, categories, splitterEnvelopes, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes };
 }

@@ -131,7 +131,7 @@ export default function App() {
 
   const userId = user?.uid ?? null;
 
-  const { expenses, cards, categories, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, updateCategory, deleteCategory }
+  const { expenses, cards, categories, splitterEnvelopes, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes }
     = useExpenseStore(userId);
 
   const { budgets, setBudget }
@@ -232,7 +232,7 @@ export default function App() {
               />
             )}
             {tab === "splitter" && (
-              <FinanceSplitter />
+              <FinanceSplitter envelopes={splitterEnvelopes} onUpdateEnvelopes={updateSplitterEnvelopes} />
             )}
           </>
         )}

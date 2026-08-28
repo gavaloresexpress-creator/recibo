@@ -9,20 +9,8 @@ const DEFAULT_ENVELOPES = [
   { id: "e3", name: "Investimentos", percent: 20, color: "#3DD68C" },
 ];
 
-export default function FinanceSplitter() {
+export default function FinanceSplitter({ envelopes = [], onUpdateEnvelopes }) {
   const [amountMasked, setAmountMasked] = useState("0,00");
-  const [envelopes, setEnvelopes] = useState(() => {
-    try {
-      const saved = localStorage.getItem("calfin_envelopes");
-      return saved ? JSON.parse(saved) : DEFAULT_ENVELOPES;
-    } catch {
-      return DEFAULT_ENVELOPES;
-    }
-  });
-
-  useEffect(() => {
-    localStorage.setItem("calfin_envelopes", JSON.stringify(envelopes));
-  }, [envelopes]);
 
   const totalAmount = currencyToNumber(amountMasked) || 0;
   const totalPercent = envelopes.reduce((s, e) => s + (Number(e.percent) || 0), 0);
@@ -30,15 +18,15 @@ export default function FinanceSplitter() {
 
   function handleAdd() {
     const newId = "e" + Date.now();
-    setEnvelopes([...envelopes, { id: newId, name: "Nova Categoria", percent: 0, color: "#7A8AAD" }]);
+    onUpdateEnvelopes([...envelopes, { id: newId, name: "Nova Categoria", percent: 0, color: "#7A8AAD" }]);
   }
 
   function handleRemove(id) {
-    setEnvelopes(envelopes.filter(e => e.id !== id));
+    onUpdateEnvelopes(envelopes.filter(e => e.id !== id));
   }
 
   function handleUpdate(id, field, value) {
-    setEnvelopes(envelopes.map(e => e.id === id ? { ...e, [field]: value } : e));
+    onUpdateEnvelopes(envelopes.map(e => e.id === id ? { ...e, [field]: value } : e));
   }
 
   return (
