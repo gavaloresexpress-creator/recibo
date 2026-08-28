@@ -397,18 +397,45 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       </div>
       )}
 
-      {/* Recorrente Toggle */}
-      <div className="field" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <input 
-          type="checkbox" 
-          id="campo-recorrente" 
-          checked={isRecurring}
-          onChange={(e) => setIsRecurring(e.target.checked)}
-          style={{ width: 18, height: 18, accentColor: "var(--gold)" }}
-        />
-        <label htmlFor="campo-recorrente" style={{ cursor: "pointer", fontSize: 14, color: "var(--text)" }}>
-          Despesa Recorrente (Assinatura mensal)
-        </label>
+      {/* Recorrente Toggle (Premium) */}
+      <div className="field">
+        <div 
+          onClick={() => setIsRecurring(!isRecurring)}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "12px 16px", borderRadius: "12px", cursor: "pointer",
+            background: isRecurring ? "var(--gold-glow)" : "var(--bg-elev)",
+            border: `1px solid ${isRecurring ? "var(--gold)" : "var(--border)"}`,
+            transition: "all 0.2s ease",
+            marginTop: 4
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 20 }}>🔄</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: isRecurring ? "var(--gold)" : "var(--text)" }}>
+                Despesa Recorrente
+              </span>
+              <span style={{ fontSize: 12, color: isRecurring ? "var(--gold)" : "var(--text-muted)", opacity: 0.8 }}>
+                Repetir todos os meses (ex: assinaturas)
+              </span>
+            </div>
+          </div>
+          {/* Switch UI */}
+          <div style={{
+            width: 40, height: 24, borderRadius: 12,
+            background: isRecurring ? "var(--gold)" : "var(--bg)",
+            border: `1px solid ${isRecurring ? "var(--gold)" : "var(--border-lg)"}`,
+            position: "relative", transition: "all 0.2s ease"
+          }}>
+            <div style={{
+              width: 18, height: 18, borderRadius: "50%", 
+              background: isRecurring ? "var(--bg)" : "var(--text-muted)",
+              position: "absolute", top: 2, left: isRecurring ? 18 : 2,
+              transition: "all 0.2s ease", boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+            }} />
+          </div>
+        </div>
       </div>
 
       {/* Parcelas — só no crédito e NÃO recorrente */}
