@@ -294,12 +294,15 @@ input, select, textarea { font-family: inherit; }
   border: 1.5px solid var(--border);
   background: rgba(13,17,23,0.8);
   border-radius: var(--r-sm);
-  padding: 9px 10px;
-  font-size: 12.5px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
   text-align: left;
   transition: all var(--t);
+  width: 100%;
+  justify-content: flex-start;
 }
 .chip:hover { border-color: var(--border-lg); color: var(--text); transform: translateY(-1px); }
 .chip.active {
