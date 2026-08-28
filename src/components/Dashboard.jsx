@@ -314,6 +314,9 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
         transition={{ type: "spring", stiffness: 300 }}
       >
         <p className="section-title" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--gold)" }}>
+          <Calendar size={13} /> Balanço do período
+        </p>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
           {presets.map((p) => (
             <button
               key={p.label}
