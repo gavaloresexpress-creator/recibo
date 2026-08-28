@@ -66,6 +66,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
   const [newCard, setNewCard]         = useState("");
   const [errors, setErrors]           = useState({});
   const [showPreview, setShowPreview] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
   const [formaPagamento, setFormaPagamento] = useState("credito");
   const [showAddCat, setShowAddCat]   = useState(false);
   const [isEditingCategories, setIsEditingCategories] = useState(false);
@@ -85,6 +86,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       setCategoria(initialExpense.categoria);
       setCartao(initialExpense.cartao);
       setParcelas(initialExpense.parcelas);
+      setIsRecurring(initialExpense.isRecurring || false);
       setFormaPagamento(initialExpense.formaPagamento || "credito");
       setMesInicioParcelas(initialExpense.mesInicioParcelas || (() => {
         const d = new Date();
@@ -125,15 +127,17 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       notas: notas.trim(),
       categoria,
       cartao: formaPagamento === "credito" ? cartao : null,
-      parcelas: formaPagamento === "credito" ? parcelasNum : 1,
+      isRecurring,
+      parcelas: (formaPagamento === "credito" && !isRecurring) ? parcelasNum : 1,
       formaPagamento,
-      mesInicioParcelas: formaPagamento === "credito" && parcelasNum > 1 ? mesInicioParcelas : null,
+      mesInicioParcelas: formaPagamento === "credito" && parcelasNum > 1 && !isRecurring ? mesInicioParcelas : null,
     });
     // Reset
     setValorMasked("");
     setDescricao("");
     setNotas("");
     setParcelas(1);
+    setIsRecurring(false);
     setFormaPagamento("credito");
     setData(todayISO());
     setErrors({});
@@ -198,9 +202,9 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 11, color: "var(--text-muted)" }}>
             <span>📅 {data}</span>
             {formaPagamento === "credito" ? (
-              <span>💳 {cartao}{parcelasNum > 1 ? ` · ${parcelasNum}x de ${formatBRL(valorParcela)}` : ""}</span>
+              <span>💳 {cartao}{isRecurring ? " · 🔄 Recorrente" : (parcelasNum > 1 ? ` · ${parcelasNum}x de ${formatBRL(valorParcela)}` : "")}</span>
             ) : (
-              <span>{PAYMENT_METHODS.find(p => p.key === formaPagamento)?.icon} {PAYMENT_METHODS.find(p => p.key === formaPagamento)?.label}</span>
+              <span>{PAYMENT_METHODS.find(p => p.key === formaPagamento)?.icon} {PAYMENT_METHODS.find(p => p.key === formaPagamento)?.label}{isRecurring ? " · 🔄 Recorrente" : ""}</span>
             )}
             <span>🏷️ {selCat?.label}</span>
           </div>
@@ -393,8 +397,22 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       </div>
       )}
 
-      {/* Parcelas — só no crédito */}
-      {formaPagamento === "credito" && (
+      {/* Recorrente Toggle */}
+      <div className="field" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <input 
+          type="checkbox" 
+          id="campo-recorrente" 
+          checked={isRecurring}
+          onChange={(e) => setIsRecurring(e.target.checked)}
+          style={{ width: 18, height: 18, accentColor: "var(--gold)" }}
+        />
+        <label htmlFor="campo-recorrente" style={{ cursor: "pointer", fontSize: 14, color: "var(--text)" }}>
+          Despesa Recorrente (Assinatura mensal)
+        </label>
+      </div>
+
+      {/* Parcelas — só no crédito e NÃO recorrente */}
+      {formaPagamento === "credito" && !isRecurring && (
       <div className="field">
         <label className="field__label" htmlFor="campo-parcelas">Número de parcelas</label>
         <select
@@ -417,8 +435,8 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       </div>
       )}
 
-      {/* Mês da 1ª parcela (só no crédito parcelado) */}
-      {formaPagamento === "credito" && parcelasNum > 1 && (
+      {/* Mês da 1ª parcela (só no crédito parcelado e não recorrente) */}
+      {formaPagamento === "credito" && parcelasNum > 1 && !isRecurring && (
         <div className="field">
           <label className="field__label" htmlFor="campo-mes-inicio">
             1ª parcela em

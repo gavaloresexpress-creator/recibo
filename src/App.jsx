@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { LogOut } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { LogOut, Sun, Moon } from "lucide-react";
 import { useAuth }          from "./hooks/useAuth";
 import { useExpenseStore }  from "./hooks/useExpenseStore";
 import { useBudgetStore }   from "./hooks/useBudgetStore";
@@ -23,6 +23,20 @@ function Header({ expenses, user, onSignOut }) {
     .filter((e) => e.key === curKey)
     .reduce((s, e) => s + e.value, 0);
 
+  const [isLightMode, setIsLightMode] = useState(() => {
+    return localStorage.getItem("theme") === "light";
+  });
+
+  useEffect(() => {
+    if (isLightMode) {
+      document.documentElement.classList.add("theme-light");
+      localStorage.setItem("theme", "light");
+    } else {
+      document.documentElement.classList.remove("theme-light");
+      localStorage.setItem("theme", "dark");
+    }
+  }, [isLightMode]);
+
   return (
     <header className="header">
       <div className="header__brand">
@@ -36,6 +50,15 @@ function Header({ expenses, user, onSignOut }) {
             💰 {formatBRL(curTotal)}
           </div>
         )}
+        {/* Theme Toggle */}
+        <button
+          className="icon-btn"
+          onClick={() => setIsLightMode(!isLightMode)}
+          title="Alternar tema"
+          style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-elev)", border: "1px solid var(--border)", color: "var(--text-muted)" }}
+        >
+          {isLightMode ? <Moon size={16} /> : <Sun size={16} />}
+        </button>
 
         {/* Avatar + logout */}
         <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8 }}>
@@ -192,7 +215,7 @@ export default function App() {
               />
             )}
             {tab === "dashboard" && (
-              <Dashboard expenses={expenses} categories={categories} />
+              <Dashboard expenses={expenses} categories={categories} budgets={budgets} />
             )}
             {tab === "report" && (
               <Report

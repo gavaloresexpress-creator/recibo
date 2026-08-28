@@ -47,8 +47,10 @@ export function shiftMonthKey(key, delta) {
 }
 
 export function getInstallmentEntries(expense) {
-  const parcelas = Math.max(1, Number(expense.parcelas) || 1);
-  const valorParcela = Number(expense.valor) / parcelas;
+  const isRecurring = expense.isRecurring === true;
+  // Se for recorrente, projeta para os próximos 24 meses (para aparecer nos gráficos/dashboards).
+  const parcelas = isRecurring ? 24 : Math.max(1, Number(expense.parcelas) || 1);
+  const valorParcela = isRecurring ? Number(expense.valor) : Number(expense.valor) / parcelas;
 
   // Usa mesInicioParcelas se definido (ex: compra feita após fechamento da fatura),
   // caso contrário usa o mês da data da compra
@@ -69,8 +71,9 @@ export function getInstallmentEntries(expense) {
       categoria: expense.categoria,
       cartao: expense.cartao,
       id: expense.id,
-      installmentIndex: i + 1,
-      totalInstallments: parcelas,
+      installmentIndex: isRecurring ? i + 1 : i + 1,
+      totalInstallments: isRecurring ? "∞" : parcelas,
+      isRecurring,
     });
   }
   return entries;

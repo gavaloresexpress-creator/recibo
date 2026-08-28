@@ -3,7 +3,8 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart, ReferenceLine,
 } from "recharts";
-import { Wallet, TrendingUp, TrendingDown, CreditCard, Calendar } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, CreditCard, Calendar, Lightbulb, Target } from "lucide-react";
+import { motion } from "framer-motion";
 
 import {
   formatBRL, currentMonthKey, monthLabel, shiftMonthKey, getInstallmentEntries, todayISO,
@@ -31,7 +32,7 @@ function firstOfCurrentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
-export default function Dashboard({ expenses, categories }) {
+export default function Dashboard({ expenses, categories, budgets = {} }) {
   const curKey = currentMonthKey();
   const today = todayISO();
 
@@ -200,6 +201,20 @@ export default function Dashboard({ expenses, categories }) {
     : 0;
   const topCategory = byCategory[0];
 
+  // Insights Inteligentes
+  const insights = useMemo(() => {
+    const list = [];
+    if (deltaPercent !== null) {
+      if (deltaPercent > 0) list.push({ icon: "⚠️", text: `Atenção: Seus gastos subiram ${deltaPercent}% em relação ao período anterior.` });
+      else if (deltaPercent < 0) list.push({ icon: "🎉", text: `Ótimo! Você economizou ${Math.abs(deltaPercent)}% em relação ao período anterior.` });
+    }
+    if (topCategory && totalMes > 0 && (topCategory.value / totalMes) > 0.4) {
+      list.push({ icon: "📊", text: `${topCategory.label} representa mais de 40% das suas despesas este mês.` });
+    }
+    if (list.length === 0) list.push({ icon: "💡", text: "Tudo sob controle por aqui. Continue registrando seus gastos!" });
+    return list;
+  }, [deltaPercent, topCategory, totalMes]);
+
   // Atalhos de período
   const presets = [
     {
@@ -254,10 +269,42 @@ export default function Dashboard({ expenses, categories }) {
   }
 
   return (
-    <div className="tab-enter" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <motion.div 
+      className="tab-enter" 
+      style={{ display: "flex", flexDirection: "column", gap: 16 }}
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      
+      {/* Insights */}
+      <motion.div 
+        className="card" 
+        style={{ background: "linear-gradient(to right, rgba(91,141,239,0.05), var(--bg-card))", borderLeft: "3px solid var(--blue)", padding: "12px 16px" }}
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--blue)", marginBottom: 8 }}>
+          <Lightbulb size={14} /> Insights do Período
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {insights.map((insight, idx) => (
+            <div key={idx} style={{ display: "flex", gap: 8, fontSize: 12, color: "var(--text-muted)" }}>
+              <span>{insight.icon}</span>
+              <span>{insight.text}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
 
       {/* KPI Principal com seletor de período */}
-      <div className="card" style={{ border: "1px solid rgba(230,180,74,0.3)", background: "linear-gradient(135deg, rgba(230,180,74,0.06) 0%, var(--bg-card) 100%)" }}>
+      <motion.div 
+        className="card" 
+        style={{ border: "1px solid rgba(230,180,74,0.3)", background: "linear-gradient(135deg, rgba(230,180,74,0.06) 0%, var(--bg-card) 100%)" }}
+        whileHover={{ scale: 1.01 }}
+        transition={{ type: "spring", stiffness: 300 }}
+      >
         <p className="section-title" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--gold)" }}>
           <Calendar size={13} /> Total do período
         </p>
@@ -355,10 +402,10 @@ export default function Dashboard({ expenses, categories }) {
             </span>
           )}
         </p>
-      </div>
+      </motion.div>
 
       {/* Stats rápidas */}
-      <div className="stat-grid">
+      <motion.div className="stat-grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
         <div className="stat-card">
           <div className="stat-card__label">Total compras</div>
           <div className="stat-card__value">{expenses.length}</div>
@@ -385,7 +432,48 @@ export default function Dashboard({ expenses, categories }) {
             </div>
           </>
         )}
-      </div>
+      </motion.div>
+
+      {/* Metas e Limites (Budgets) */}
+      {Object.values(budgets).some(v => v > 0) && (
+        <motion.div className="card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <p className="section-title">
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Target size={13} /> Orçamento do Mês — {monthLabel(curKey)}
+            </span>
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {categories.map((cat) => {
+              const limit = budgets[cat.key] || 0;
+              if (limit <= 0) return null;
+              
+              const spent = byCategory.find(c => c.key === cat.key)?.value || 0;
+              const pct = Math.min(100, Math.round((spent / limit) * 100));
+              const isOver = spent > limit;
+              const barColor = isOver ? "var(--rust)" : (pct > 85 ? "var(--gold)" : cat.color);
+
+              return (
+                <div key={cat.key}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                    <span style={{ color: "var(--text-muted)" }}>{cat.icon} {cat.label}</span>
+                    <span style={{ color: isOver ? "var(--rust)" : "var(--text)" }}>
+                      <strong style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{formatBRL(spent)}</strong> / {formatBRL(limit)}
+                    </span>
+                  </div>
+                  <div style={{ background: "rgba(255,255,255,0.05)", height: 6, borderRadius: 3, overflow: "hidden" }}>
+                    <motion.div 
+                      style={{ background: barColor, height: "100%", borderRadius: 3 }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.8, ease: "easeOut" }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+      )}
 
       {/* Pie Chart — Categorias (mês atual) */}
       {byCategory.length > 0 && (

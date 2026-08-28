@@ -46,6 +46,29 @@
   --t: 0.2s ease;
 }
 
+:root.theme-light {
+  --bg:        #F8F9FA;
+  --bg-elev:   #FFFFFF;
+  --bg-card:   #FFFFFF;
+  --bg-hover:  #F1F3F5;
+  --border:    #E9ECEF;
+  --border-lg: #DEE2E6;
+
+  --gold:      #C9922B;
+  --gold-dim:  rgba(201,146,43,0.15);
+  --gold-glow: rgba(201,146,43,0.08);
+  --rust:      #D92D20;
+  --sage:      #039855;
+  --blue:      #2D68EB;
+
+  --text:       #111827;
+  --text-muted: #4B5563;
+  --text-dim:   #6B7280;
+
+  --shadow-card: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-sm:   0 2px 6px  rgba(0,0,0,0.05);
+}
+
 html, body, #root {
   height: 100%;
   width: 100%;
