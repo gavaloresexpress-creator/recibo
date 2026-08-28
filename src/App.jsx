@@ -18,10 +18,6 @@ import BudgetManager  from "./components/BudgetManager";
 // ─────────────────────────────────────────────────────────────
 function Header({ expenses, user, onSignOut }) {
   const curKey = currentMonthKey();
-  const curTotal = expenses
-    .flatMap((e) => getInstallmentEntries(e))
-    .filter((e) => e.key === curKey)
-    .reduce((s, e) => s + e.value, 0);
 
   const [isLightMode, setIsLightMode] = useState(() => {
     return localStorage.getItem("theme") === "light";
@@ -45,11 +41,7 @@ function Header({ expenses, user, onSignOut }) {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-        {curTotal > 0 && (
-          <div className="header__badge" title="Total do mês atual (incluindo parcelas)">
-            💰 {formatBRL(curTotal)}
-          </div>
-        )}
+
         {/* Theme Toggle */}
         <button
           className="icon-btn"

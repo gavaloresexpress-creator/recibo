@@ -549,7 +549,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
           style={{ flex: 1 }}
           onClick={handleSubmit}
         >
-          {initialExpense ? "Salvar alterações" : "Salvar gasto"}
+          {initialExpense ? "Salvar alterações" : (tipo === "receita" ? "Salvar recebimento" : "Salvar gasto")}
         </button>
         {initialExpense && (
           <button
