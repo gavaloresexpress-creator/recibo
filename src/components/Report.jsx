@@ -137,8 +137,8 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
               </select>
             </div>
           </div>
-          <div className="filters__row">
-            <div>
+          <div className="filters__row" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ flex: 1, minWidth: "120px" }}>
               <select
                 className="select"
                 value={filterCartao}
@@ -149,7 +149,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
                 {cards.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div>
+            <div style={{ flex: 1, minWidth: "120px" }}>
               <select
                 className="select"
                 value={filterForma}
@@ -162,19 +162,24 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
                 ))}
               </select>
             </div>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <button
-                className="csv-btn"
-                onClick={() => exportCSV(filtered, categories)}
-                disabled={filtered.length === 0}
-                title="Exportar CSV"
-                id="btn-exportar-csv"
-              >
-                <Download size={14} />
-                Exportar CSV
-              </button>
-            </div>
           </div>
+          
+          <button
+            className="csv-btn"
+            onClick={() => exportCSV(filtered, categories)}
+            disabled={filtered.length === 0}
+            title="Exportar CSV"
+            id="btn-exportar-csv"
+            style={{
+              width: "100%", padding: "12px", borderRadius: "12px", 
+              background: "rgba(61, 214, 140, 0.1)", border: "1px solid var(--sage)", 
+              color: "var(--sage)", display: "flex", justifyContent: "center", 
+              alignItems: "center", gap: 8, fontWeight: 600, transition: "all 0.2s"
+            }}
+          >
+            <Download size={16} />
+            Exportar CSV
+          </button>
         </div>
       </div>
 

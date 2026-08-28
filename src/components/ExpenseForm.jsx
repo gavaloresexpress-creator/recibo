@@ -492,7 +492,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 12 }}>
+      <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
         <button
           type="button"
           id="btn-salvar-gasto"
@@ -505,8 +505,18 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
         {initialExpense && (
           <button
             type="button"
-            className="del-btn"
-            style={{ padding: "0 16px", background: "rgba(255,255,255,0.05)", borderRadius: "var(--r-md)", color: "var(--text)" }}
+            style={{ 
+              flex: 1, 
+              padding: "16px", 
+              background: "var(--bg-hover)", 
+              borderRadius: "var(--r-md)", 
+              color: "var(--text)", 
+              border: "1px solid var(--border-lg)",
+              fontWeight: 600,
+              fontSize: 15,
+              cursor: "pointer",
+              transition: "all 0.2s ease"
+            }}
             onClick={onCancelEdit}
           >
             Cancelar
