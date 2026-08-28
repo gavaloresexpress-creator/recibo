@@ -131,8 +131,9 @@ export default function App() {
 
   const userId = user?.uid ?? null;
 
-  const { expenses, cards, categories, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, deleteCategory }
+  const { expenses, cards, categories, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, updateCategory, deleteCategory }
     = useExpenseStore(userId);
+
   const { budgets, setBudget }
     = useBudgetStore(userId, categories);
 
@@ -141,8 +142,8 @@ export default function App() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editTarget,   setEditTarget]   = useState(null);
 
-  const handleSaved = useCallback((tipo = "despesa") => {
-    const noun = tipo === "receita" ? "Recebimento" : "Gasto";
+  const handleSaved = useCallback((tipoStr = "despesa") => {
+    const noun = tipoStr === "receita" ? "Recebimento" : "Gasto";
     const action = editTarget ? "atualizado" : "salvo";
     setToast(`${noun} ${action} com sucesso!`);
     setEditTarget(null);
@@ -200,6 +201,7 @@ export default function App() {
                 onAdd={editTarget ? (data) => updateExpense(editTarget.id, data) : addExpense}
                 onAddCard={addCard}
                 addCategory={addCategory}
+                updateCategory={updateCategory}
                 deleteCategory={deleteCategory}
                 onSaved={handleSaved}
                 initialExpense={editTarget}

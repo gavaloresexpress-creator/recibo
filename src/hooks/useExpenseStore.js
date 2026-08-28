@@ -162,5 +162,17 @@ export function useExpenseStore(userId) {
     }
   }, [userId, categories]);
 
-  return { expenses, cards, categories, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, deleteCategory };
+  // ── Atualizar Categoria ──────────────────────────────────────────
+  const updateCategory = useCallback(async (key, newData) => {
+    if (!userId) return;
+    const newList = categories.map((c) => (c.key === key ? { ...c, ...newData } : c));
+    setCategories(newList);
+    try {
+      await setDoc(categoriesDoc(userId), { list: newList }, { merge: true });
+    } catch (err) {
+      console.error("updateCategory error:", err);
+    }
+  }, [userId, categories]);
+
+  return { expenses, cards, categories, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, updateCategory, deleteCategory };
 }

@@ -48,7 +48,7 @@ function AutocompleteInput({ value, onChange, suggestions, placeholder, classNam
   );
 }
 
-export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddCard, addCategory, deleteCategory, onSaved, initialExpense, onCancelEdit }) {
+export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddCard, addCategory, updateCategory, deleteCategory, onSaved, initialExpense, onCancelEdit }) {
   const [valorMasked, setValorMasked] = useState("");
   const [data, setData]               = useState(todayISO());
   const [descricao, setDescricao]     = useState("");
@@ -73,7 +73,8 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
   const [isEditingCategories, setIsEditingCategories] = useState(false);
   const [newCatLabel, setNewCatLabel] = useState("");
   const [newCatIcon, setNewCatIcon]   = useState("");
-  const [newCatColor, setNewCatColor] = useState("#8B5CF6");
+  const [newCatColor, setNewCatColor] = useState("#3B82F6");
+  const [editingCatKey, setEditingCatKey] = useState(null);
 
   // Histórico de descrições para autocomplete
   const descHistory = [...new Set(expenses.map((e) => e.descricao))];
@@ -339,9 +340,15 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
           <label className="field__label" style={{ marginBottom: 0 }}>Categoria</label>
           <div style={{ display: "flex", gap: 12 }}>
             <button type="button" style={{ background: "none", border: "none", color: "var(--text-muted)", fontSize: 12, cursor: "pointer" }} onClick={() => setIsEditingCategories(!isEditingCategories)}>
-              {isEditingCategories ? "Concluído" : "Apagar..."}
+              {isEditingCategories ? "Concluído" : "Editar / Apagar"}
             </button>
-            <button type="button" style={{ background: "none", border: "none", color: "var(--gold)", fontSize: 12, cursor: "pointer" }} onClick={() => setShowAddCat(!showAddCat)}>
+            <button type="button" style={{ background: "none", border: "none", color: "var(--gold)", fontSize: 12, cursor: "pointer" }} onClick={() => {
+              setEditingCatKey(null);
+              setNewCatLabel("");
+              setNewCatIcon("");
+              setNewCatColor("#3B82F6");
+              setShowAddCat(!showAddCat);
+            }}>
               {showAddCat ? "Cancelar" : "+ Nova"}
             </button>
           </div>
@@ -354,16 +361,33 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
               <input className="input" placeholder="Ícone (Ex: 🐶)" value={newCatIcon} onChange={e => setNewCatIcon(e.target.value)} style={{ width: 90 }} />
               <input type="color" value={newCatColor} onChange={e => setNewCatColor(e.target.value)} style={{ width: 44, height: 44, padding: 0, border: "none", borderRadius: 8, cursor: "pointer", background: "none" }} title="Cor da categoria" />
             </div>
-            <button type="button" className="btn-primary" style={{ padding: "8px 12px", fontSize: 12, width: "100%" }} onClick={() => {
-              if (newCatLabel.trim()) {
-                const key = newCatLabel.trim().toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now();
-                addCategory({ key, label: newCatLabel.trim(), icon: newCatIcon || "🏷️", color: newCatColor, tipo });
-                setShowAddCat(false);
-                setNewCatLabel("");
-                setNewCatIcon("");
-                setCategoria(key);
-              }
-            }}>Salvar Categoria</button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" className="btn-primary" style={{ padding: "8px 12px", fontSize: 12, flex: 1 }} onClick={() => {
+                if (newCatLabel.trim()) {
+                  if (editingCatKey) {
+                    updateCategory(editingCatKey, { label: newCatLabel.trim(), icon: newCatIcon || "🏷️", color: newCatColor });
+                  } else {
+                    const key = newCatLabel.trim().toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now();
+                    addCategory({ key, label: newCatLabel.trim(), icon: newCatIcon || "🏷️", color: newCatColor, tipo });
+                    setCategoria(key);
+                  }
+                  setShowAddCat(false);
+                  setNewCatLabel("");
+                  setNewCatIcon("");
+                  setEditingCatKey(null);
+                }
+              }}>Salvar</button>
+              {editingCatKey && (
+                <button type="button" className="btn-secondary" style={{ padding: "8px 12px", fontSize: 12, color: "var(--rust)", flexShrink: 0 }} onClick={() => {
+                  if (window.confirm("Tem certeza que deseja apagar esta categoria?")) {
+                    deleteCategory(editingCatKey);
+                    if (categoria === editingCatKey) setCategoria(categories[0]?.key);
+                    setShowAddCat(false);
+                    setEditingCatKey(null);
+                  }
+                }}>Apagar</button>
+              )}
+            </div>
           </div>
         )}
 
@@ -375,23 +399,24 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
                 className={`chip${categoria === c.key ? " active" : ""}`}
                 onClick={() => {
                   if (isEditingCategories) {
-                    if (window.confirm(`Tem certeza que deseja apagar a categoria ${c.label}?`)) {
-                      deleteCategory(c.key);
-                      if (categoria === c.key) setCategoria(categories[0]?.key);
-                    }
+                    setEditingCatKey(c.key);
+                    setNewCatLabel(c.label);
+                    setNewCatIcon(c.icon);
+                    setNewCatColor(c.color || (c.tipo === "receita" ? "#10B981" : "#F0A500"));
+                    setShowAddCat(true);
                   } else {
                     setCategoria(c.key);
                   }
                 }}
-                style={isEditingCategories ? { border: "1px dashed var(--rust)", opacity: 0.8, color: "var(--rust)" } : {}}
+                style={isEditingCategories ? { border: "1px dashed var(--gold)", opacity: 0.8 } : {}}
                 aria-pressed={categoria === c.key}
               >
                 <span className="chip__icon">{c.icon}</span>
                 {c.label}
               </button>
               {isEditingCategories && (
-                <div style={{ position: "absolute", top: -5, right: -5, background: "var(--rust)", color: "#fff", borderRadius: "50%", width: 16, height: 16, fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                  <X size={10} strokeWidth={3} />
+                <div style={{ position: "absolute", top: -5, right: -5, background: "var(--gold)", color: "#000", borderRadius: "50%", width: 16, height: 16, fontSize: 10, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+                  ✏️
                 </div>
               )}
             </div>
