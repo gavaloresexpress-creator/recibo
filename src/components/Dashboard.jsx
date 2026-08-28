@@ -679,6 +679,6 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
           );
         })}
       </div>
-    </div>
+    </motion.div>
   );
 }
