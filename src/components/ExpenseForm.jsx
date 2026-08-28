@@ -166,7 +166,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
     <div className="card tab-enter">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <p className="section-title" style={{ marginBottom: 0 }}>
-          {initialExpense ? "Editar gasto" : "Novo gasto"}
+          {initialExpense ? "Editar lançamento" : "Novo lançamento"}
         </p>
         <button
           type="button"
@@ -293,7 +293,9 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
           {errors.valor && <span className="field__error">{errors.valor}</span>}
         </div>
         <div className="field">
-          <label className="field__label" htmlFor="campo-data">Data da compra</label>
+          <label className="field__label" htmlFor="campo-data">
+            {tipo === "receita" ? "Data do recebimento" : "Data da compra"}
+          </label>
           <input
             id="campo-data"
             className={`input${errors.data ? " input--error" : ""}`}

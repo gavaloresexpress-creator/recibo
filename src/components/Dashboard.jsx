@@ -521,11 +521,11 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
                 <div className="legend-row__bar-wrap">
                   <div
                     className="legend-row__bar"
-                    style={{ background: c.color, width: `${Math.round((c.value / totalMes) * 100)}%` }}
+                    style={{ background: c.color, width: `${Math.round((c.value / totalMesDespesas) * 100)}%` }}
                   />
                 </div>
                 <span className="legend-row__value">{formatBRL(c.value)}</span>
-                <span className="legend-row__pct">{Math.round((c.value / totalMes) * 100)}%</span>
+                <span className="legend-row__pct">{Math.round((c.value / totalMesDespesas) * 100)}%</span>
               </div>
             ))}
           </div>
@@ -621,11 +621,11 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
               <div className="legend-row__bar-wrap">
                 <div
                   className="legend-row__bar"
-                  style={{ background: m.color, width: `${Math.round((m.value / totalMes) * 100)}%` }}
+                  style={{ background: m.color, width: `${Math.round((m.value / totalMesDespesas) * 100)}%` }}
                 />
               </div>
               <span className="legend-row__value">{formatBRL(m.value)}</span>
-              <span className="legend-row__pct">{Math.round((m.value / totalMes) * 100)}%</span>
+              <span className="legend-row__pct">{Math.round((m.value / totalMesDespesas) * 100)}%</span>
             </div>
           ))}
         </div>
