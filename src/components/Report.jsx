@@ -9,11 +9,12 @@ import {
 
 function exportCSV(data, categories) {
   const catByKey = Object.fromEntries(categories.map((c) => [c.key, c]));
-  const headers = ["Data", "Descrição", "Categoria", "Cartão", "Parcelas", "Valor Total", "Valor Parcela", "Notas"];
+  const headers = ["Data", "Descrição", "Categoria", "Tipo", "Cartão", "Parcelas", "Valor Total", "Valor Parcela", "Notas"];
   const rows = data.map((e) => [
     formatDateBR(e.data),
     `"${e.descricao.replace(/"/g, '""')}"`,
     catByKey[e.categoria]?.label || e.categoria,
+    e.tipo === "receita" ? "Receita" : "Despesa",
     e.cartao,
     e.parcelas,
     e.valor.toFixed(2).replace(".", ","),
@@ -35,6 +36,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
   const [filterCategoria, setFilterCategoria] = useState("todos");
   const [filterCartao,    setFilterCartao]    = useState("todos");
   const [filterForma,     setFilterForma]     = useState("todos");
+  const [filterTipo,      setFilterTipo]      = useState("todos");
   const [search,          setSearch]          = useState("");
 
   const catByKey = useMemo(() => {
@@ -59,6 +61,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       .filter((e) => filterCategoria === "todos" || e.categoria         === filterCategoria)
       .filter((e) => filterCartao    === "todos" || e.cartao            === filterCartao)
       .filter((e) => filterForma     === "todos" || (e.formaPagamento || "credito") === filterForma)
+      .filter((e) => filterTipo      === "todos" || (e.tipo || "despesa") === filterTipo)
       .filter((e) =>
         !q ||
         e.descricao.toLowerCase().includes(q) ||
@@ -66,7 +69,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
         e.cartao.toLowerCase().includes(q)
       )
       .sort((a, b) => b.data.localeCompare(a.data));
-  }, [expenses, filterMonth, filterCategoria, filterCartao, filterForma, search]);
+  }, [expenses, filterMonth, filterCategoria, filterCartao, filterForma, filterTipo, search]);
 
   const faturaMes = useMemo(() => {
     if (filterMonth === "todos") return null;
@@ -82,7 +85,8 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       .reduce((s, e) => s + e.value, 0);
   }, [allEntries, filterMonth, filterCategoria, filterCartao, filterForma, expenses]);
 
-  const totalCompras = filtered.reduce((s, e) => s + e.valor, 0);
+  const totalCompras = filtered.filter(e => e.tipo !== "receita").reduce((s, e) => s + e.valor, 0);
+  const totalReceitas = filtered.filter(e => e.tipo === "receita").reduce((s, e) => s + e.valor, 0);
 
   const byCategory = useMemo(() => {
     const map = {};
@@ -134,6 +138,18 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
                 {categories.map((c) => (
                   <option key={c.key} value={c.key}>{c.icon} {c.label}</option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <select
+                className="select"
+                value={filterTipo}
+                onChange={(e) => setFilterTipo(e.target.value)}
+                aria-label="Filtrar por tipo"
+              >
+                <option value="todos">Todos os tipos</option>
+                <option value="despesa">Saídas</option>
+                <option value="receita">Entradas</option>
               </select>
             </div>
           </div>
@@ -198,12 +214,21 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       <div className="card">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
           <p className="section-title" style={{ marginBottom: 0 }}>
-            Compras ({filtered.length})
+            Lançamentos ({filtered.length})
           </p>
           {filtered.length > 0 && (
-            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "var(--gold)" }}>
-              {formatBRL(totalCompras)}
-            </span>
+            <div style={{ display: "flex", gap: 8 }}>
+              {totalReceitas > 0 && (
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "var(--sage)" }}>
+                  +{formatBRL(totalReceitas)}
+                </span>
+              )}
+              {totalCompras > 0 && (
+                <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, color: "var(--rust)" }}>
+                  -{formatBRL(totalCompras)}
+                </span>
+              )}
+            </div>
           )}
         </div>
 
@@ -250,7 +275,9 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
                       )}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
-                      <span className="list-row__value">{formatBRL(e.valor)}</span>
+                      <span className="list-row__value" style={{ color: e.tipo === "receita" ? "var(--sage)" : "var(--rust)" }}>
+                        {e.tipo === "receita" ? "+" : "-"}{formatBRL(e.valor)}
+                      </span>
                       <div style={{ display: "flex", gap: 6 }}>
                         <button
                           className="del-btn"

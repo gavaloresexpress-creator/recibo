@@ -71,6 +71,7 @@ export function getInstallmentEntries(expense) {
       categoria: expense.categoria,
       cartao: expense.cartao,
       id: expense.id,
+      tipo: expense.tipo || "despesa",
       installmentIndex: isRecurring ? i + 1 : i + 1,
       totalInstallments: isRecurring ? "∞" : parcelas,
       isRecurring,

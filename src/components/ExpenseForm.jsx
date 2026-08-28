@@ -67,6 +67,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
   const [errors, setErrors]           = useState({});
   const [showPreview, setShowPreview] = useState(false);
   const [isRecurring, setIsRecurring] = useState(false);
+  const [tipo, setTipo]               = useState("despesa");
   const [formaPagamento, setFormaPagamento] = useState("credito");
   const [showAddCat, setShowAddCat]   = useState(false);
   const [isEditingCategories, setIsEditingCategories] = useState(false);
@@ -87,6 +88,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       setCartao(initialExpense.cartao);
       setParcelas(initialExpense.parcelas);
       setIsRecurring(initialExpense.isRecurring || false);
+      setTipo(initialExpense.tipo || "despesa");
       setFormaPagamento(initialExpense.formaPagamento || "credito");
       setMesInicioParcelas(initialExpense.mesInicioParcelas || (() => {
         const d = new Date();
@@ -126,11 +128,12 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       descricao: descricao.trim(),
       notas: notas.trim(),
       categoria,
-      cartao: formaPagamento === "credito" ? cartao : null,
+      tipo,
+      cartao: formaPagamento === "credito" && tipo === "despesa" ? cartao : null,
       isRecurring,
-      parcelas: (formaPagamento === "credito" && !isRecurring) ? parcelasNum : 1,
+      parcelas: (formaPagamento === "credito" && !isRecurring && tipo === "despesa") ? parcelasNum : 1,
       formaPagamento,
-      mesInicioParcelas: formaPagamento === "credito" && parcelasNum > 1 && !isRecurring ? mesInicioParcelas : null,
+      mesInicioParcelas: formaPagamento === "credito" && parcelasNum > 1 && !isRecurring && tipo === "despesa" ? mesInicioParcelas : null,
     });
     // Reset
     setValorMasked("");
@@ -180,6 +183,48 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
         </button>
       </div>
 
+      {/* Tipo Toggle (Despesa / Receita) */}
+      {!initialExpense && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          <button
+            type="button"
+            style={{
+              flex: 1, padding: "10px", borderRadius: "10px", fontWeight: 600, fontSize: 13,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              background: tipo === "despesa" ? "rgba(230, 82, 82, 0.15)" : "var(--bg-hover)",
+              border: `1px solid ${tipo === "despesa" ? "var(--rust)" : "var(--border)"}`,
+              color: tipo === "despesa" ? "var(--rust)" : "var(--text-muted)",
+              transition: "all 0.2s"
+            }}
+            onClick={() => {
+              setTipo("despesa");
+              setCategoria(categories.find(c => c.tipo !== "receita")?.key || "");
+              setFormaPagamento("credito");
+            }}
+          >
+            <span style={{ fontSize: 16 }}>🔴</span> Nova Despesa
+          </button>
+          <button
+            type="button"
+            style={{
+              flex: 1, padding: "10px", borderRadius: "10px", fontWeight: 600, fontSize: 13,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              background: tipo === "receita" ? "rgba(61, 214, 140, 0.15)" : "var(--bg-hover)",
+              border: `1px solid ${tipo === "receita" ? "var(--sage)" : "var(--border)"}`,
+              color: tipo === "receita" ? "var(--sage)" : "var(--text-muted)",
+              transition: "all 0.2s"
+            }}
+            onClick={() => {
+              setTipo("receita");
+              setCategoria(categories.find(c => c.tipo === "receita")?.key || "");
+              setFormaPagamento("pix"); // Default para receita
+            }}
+          >
+            <span style={{ fontSize: 16 }}>🟢</span> Nova Receita
+          </button>
+        </div>
+      )}
+
       {/* Preview Card */}
       {showPreview && valor > 0 && (
         <div style={{
@@ -213,9 +258,11 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
 
       {/* Forma de pagamento */}
       <div className="field">
-        <label className="field__label">Forma de pagamento</label>
+        <label className="field__label">
+          {tipo === "receita" ? "Forma de recebimento" : "Forma de pagamento"}
+        </label>
         <div className="chip-grid">
-          {PAYMENT_METHODS.map((m) => (
+          {PAYMENT_METHODS.filter(m => tipo === "despesa" || m.key !== "credito").map((m) => (
             <button
               key={m.key}
               type="button"
@@ -308,7 +355,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
             <button type="button" className="btn-primary" style={{ padding: "8px 12px", fontSize: 12, width: "100%" }} onClick={() => {
               if (newCatLabel.trim()) {
                 const key = newCatLabel.trim().toLowerCase().replace(/[^a-z0-9]/g, "") + "-" + Date.now();
-                addCategory({ key, label: newCatLabel.trim(), icon: newCatIcon || "🏷️", color: newCatColor });
+                addCategory({ key, label: newCatLabel.trim(), icon: newCatIcon || "🏷️", color: newCatColor, tipo });
                 setShowAddCat(false);
                 setNewCatLabel("");
                 setNewCatIcon("");
@@ -319,11 +366,11 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
         )}
 
         <div className="chip-grid">
-          {categories.map((c) => (
-            <div key={c.key} style={{ position: "relative", display: "inline-block" }}>
+          {categories.filter(c => (tipo === "receita" ? c.tipo === "receita" : c.tipo !== "receita")).map((c) => (
+            <div key={c.key} style={{ position: "relative" }}>
               <button
                 type="button"
-                className={`chip${categoria === c.key && !isEditingCategories ? " active" : ""}`}
+                className={`chip${categoria === c.key ? " active" : ""}`}
                 onClick={() => {
                   if (isEditingCategories) {
                     if (window.confirm(`Tem certeza que deseja apagar a categoria ${c.label}?`)) {

@@ -54,33 +54,42 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
   // Filtra compras pela DATA DE COMPRA dentro do período.
   // Para parceladas: conta apenas o valor de 1 parcela (não o total da compra).
   const rangeStats = useMemo(() => {
-    if (!rangeStart || !rangeEnd) return { total: 0, avista: 0, parcelado: 0, numParceladas: 0, numCompras: 0 };
+    if (!rangeStart || !rangeEnd) return { totalDespesas: 0, totalReceitas: 0, saldo: 0, avista: 0, parcelado: 0, numParceladas: 0, numCompras: 0 };
 
-    let avista = 0, parcelado = 0, numParceladas = 0;
+    let avista = 0, parcelado = 0, numParceladas = 0, totalReceitas = 0;
 
     const inRange = expenses.filter((e) => e.data >= rangeStart && e.data <= rangeEnd);
 
     inRange.forEach((exp) => {
+      const isIncome = exp.tipo === "receita";
       const parcelas = Math.max(1, Number(exp.parcelas) || 1);
-      if (parcelas > 1) {
-        parcelado    += exp.valor / parcelas; // só a parcela deste período
-        numParceladas += 1;
+      
+      if (isIncome) {
+        totalReceitas += exp.valor;
       } else {
-        avista += exp.valor;
+        if (parcelas > 1) {
+          parcelado    += exp.valor / parcelas; // só a parcela deste período
+          numParceladas += 1;
+        } else {
+          avista += exp.valor;
+        }
       }
     });
 
+    const totalDespesas = avista + parcelado;
     return {
-      total:        avista + parcelado,
+      totalDespesas,
+      totalReceitas,
+      saldo: totalReceitas - totalDespesas,
       avista,
       parcelado,
       numParceladas,
-      numCompras:   inRange.length,
+      numCompras: inRange.filter(e => e.tipo !== "receita").length,
     };
   }, [expenses, rangeStart, rangeEnd]);
 
 
-  const { total: totalRange, avista: rangeAvista, parcelado: rangeParcelado,
+  const { totalDespesas, totalReceitas, saldo: rangeSaldo, avista: rangeAvista, parcelado: rangeParcelado,
           numParceladas: rangeNumParcelas, numCompras: rangeNumCompras } = rangeStats;
 
   // Comparativo: mesmo intervalo de meses no período anterior
@@ -103,25 +112,24 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
     return d.toISOString().slice(0, 10);
   }, [rangeStart]);
 
-  const totalPrevRange = useMemo(() => {
+  const totalPrevRangeDespesas = useMemo(() => {
     if (!prevRangeStart || !prevRangeEnd) return 0;
     const startKey = prevRangeStart.slice(0, 7);
     const endKey   = prevRangeEnd.slice(0, 7);
     return allEntries
-      .filter((e) => e.key >= startKey && e.key <= endKey)
+      .filter((e) => e.key >= startKey && e.key <= endKey && e.tipo !== "receita")
       .reduce((s, e) => s + e.value, 0);
   }, [allEntries, prevRangeStart, prevRangeEnd]);
 
-  const deltaPercent = totalPrevRange > 0
-    ? Math.round(((totalRange - totalPrevRange) / totalPrevRange) * 100)
+  const deltaPercent = totalPrevRangeDespesas > 0
+    ? Math.round(((totalDespesas - totalPrevRangeDespesas) / totalPrevRangeDespesas) * 100)
     : null;
 
-  // ── Mês atual para gráfico de pizza e cartões ──
   const curEntries = useMemo(
-    () => allEntries.filter((e) => e.key === curKey),
+    () => allEntries.filter((e) => e.key === curKey && e.tipo !== "receita"),
     [allEntries, curKey]
   );
-  const totalMes = curEntries.reduce((s, e) => s + e.value, 0);
+  const totalMesDespesas = curEntries.reduce((s, e) => s + e.value, 0);
 
   // Por categoria (mês atual)
   const byCategory = useMemo(() => {
@@ -208,12 +216,12 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
       if (deltaPercent > 0) list.push({ icon: "⚠️", text: `Atenção: Seus gastos subiram ${deltaPercent}% em relação ao período anterior.` });
       else if (deltaPercent < 0) list.push({ icon: "🎉", text: `Ótimo! Você economizou ${Math.abs(deltaPercent)}% em relação ao período anterior.` });
     }
-    if (topCategory && totalMes > 0 && (topCategory.value / totalMes) > 0.4) {
+    if (topCategory && totalMesDespesas > 0 && (topCategory.value / totalMesDespesas) > 0.4) {
       list.push({ icon: "📊", text: `${topCategory.label} representa mais de 40% das suas despesas este mês.` });
     }
     if (list.length === 0) list.push({ icon: "💡", text: "Tudo sob controle por aqui. Continue registrando seus gastos!" });
     return list;
-  }, [deltaPercent, topCategory, totalMes]);
+  }, [deltaPercent, topCategory, totalMesDespesas]);
 
   // Atalhos de período
   const presets = [
@@ -306,11 +314,6 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
         transition={{ type: "spring", stiffness: 300 }}
       >
         <p className="section-title" style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--gold)" }}>
-          <Calendar size={13} /> Total do período
-        </p>
-
-        {/* Atalhos rápidos */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
           {presets.map((p) => (
             <button
               key={p.label}
@@ -356,35 +359,47 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
           />
         </div>
 
-        <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Total do período</p>
-        <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 32, fontWeight: 700, color: "var(--gold)", letterSpacing: "-0.5px", marginBottom: 8 }}>
-          {formatBRL(totalRange)}
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Saldo do período</p>
+        <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 32, fontWeight: 700, color: rangeSaldo >= 0 ? "var(--sage)" : "var(--rust)", letterSpacing: "-0.5px", marginBottom: 12 }}>
+          {formatBRL(rangeSaldo)}
         </p>
+        
+        <div style={{ display: "flex", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+          {/* Entradas */}
+          <div style={{
+            flex: 1, background: "rgba(61, 214, 140, 0.08)", border: "1px solid rgba(61, 214, 140, 0.15)",
+            borderRadius: 8, padding: "8px 12px", fontSize: 12,
+          }}>
+            <span style={{ color: "var(--text-dim)", display: "block", marginBottom: 2 }}>🟢 Entradas</span>
+            <span style={{ color: "var(--sage)", fontWeight: 600, fontFamily: "'IBM Plex Mono', monospace", fontSize: 14 }}>
+              +{formatBRL(totalReceitas)}
+            </span>
+          </div>
 
-        {/* Detalhamento à vista vs parcelado */}
-        {totalRange > 0 && (
-          <div style={{ display: "flex", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+          {/* Saídas */}
+          <div style={{
+            flex: 1, background: "rgba(230, 82, 82, 0.08)", border: "1px solid rgba(230, 82, 82, 0.15)",
+            borderRadius: 8, padding: "8px 12px", fontSize: 12,
+          }}>
+            <span style={{ color: "var(--text-dim)", display: "block", marginBottom: 2 }}>🔴 Saídas</span>
+            <span style={{ color: "var(--rust)", fontWeight: 600, fontFamily: "'IBM Plex Mono', monospace", fontSize: 14 }}>
+              -{formatBRL(totalDespesas)}
+            </span>
+          </div>
+        </div>
+
+        {/* Detalhamento das saídas (à vista vs parcelado) */}
+        {totalDespesas > 0 && (
+          <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
             {rangeAvista > 0 && (
-              <div style={{
-                background: "rgba(230,180,74,0.08)", border: "1px solid rgba(230,180,74,0.15)",
-                borderRadius: 8, padding: "6px 12px", fontSize: 12,
-              }}>
-                <span style={{ color: "var(--text-dim)" }}>À vista  </span>
-                <span style={{ color: "var(--gold)", fontWeight: 600, fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {formatBRL(rangeAvista)}
-                </span>
-              </div>
+              <span style={{ fontSize: 11, color: "var(--text-dim)", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>
+                À vista: {formatBRL(rangeAvista)}
+              </span>
             )}
             {rangeParcelado > 0 && (
-              <div style={{
-                background: "rgba(91,141,239,0.08)", border: "1px solid rgba(91,141,239,0.2)",
-                borderRadius: 8, padding: "6px 12px", fontSize: 12,
-              }}>
-                <span style={{ color: "var(--text-dim)" }}>Parcelas ({rangeNumParcelas}x)  </span>
-                <span style={{ color: "#5B8DEF", fontWeight: 600, fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {formatBRL(rangeParcelado)}
-                </span>
-              </div>
+              <span style={{ fontSize: 11, color: "var(--text-dim)", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>
+                Parcelas: {formatBRL(rangeParcelado)}
+              </span>
             )}
           </div>
         )}

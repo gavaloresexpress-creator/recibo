@@ -43,7 +43,19 @@ export function useExpenseStore(userId) {
 
     // Carrega categorias (documento único)
     getDoc(categoriesDoc(userId)).then((snap) => {
-      if (snap.exists()) setCategories(snap.data().list || DEFAULT_CATEGORIES);
+      if (snap.exists()) {
+        const userCats = snap.data().list || [];
+        // Mescla defaults ausentes para garantir que novas categorias (ex: receitas) apareçam
+        const merged = [...userCats];
+        DEFAULT_CATEGORIES.forEach(dc => {
+          if (!merged.find(c => c.key === dc.key)) merged.push(dc);
+        });
+        // Garante que as antigas tenham tipo="despesa" se não tiver tipo
+        merged.forEach(c => { if (!c.tipo) c.tipo = "despesa"; });
+        setCategories(merged);
+      } else {
+        setCategories(DEFAULT_CATEGORIES);
+      }
     });
 
     // Observa gastos em tempo real
