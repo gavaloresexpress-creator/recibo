@@ -149,7 +149,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
     const nd = new Date();
     nd.setMonth(nd.getMonth() + 1);
     setMesInicioParcelas(`${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, "0")}`);
-    onSaved();
+    onSaved(tipo);
   }
 
   function handleAddCard() {
@@ -447,6 +447,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       )}
 
       {/* Recorrente Toggle (Premium) */}
+      {tipo !== "receita" && (
       <div className="field">
         <div 
           onClick={() => setIsRecurring(!isRecurring)}
@@ -486,6 +487,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
           </div>
         </div>
       </div>
+      )}
 
       {/* Parcelas — só no crédito e NÃO recorrente */}
       {formaPagamento === "credito" && !isRecurring && (

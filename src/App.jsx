@@ -12,6 +12,7 @@ import ExpenseForm    from "./components/ExpenseForm";
 import Dashboard      from "./components/Dashboard";
 import Report         from "./components/Report";
 import BudgetManager  from "./components/BudgetManager";
+import FinanceSplitter from "./components/FinanceSplitter";
 
 // ─────────────────────────────────────────────────────────────
 //  Header com info do usuário logado
@@ -140,8 +141,10 @@ export default function App() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editTarget,   setEditTarget]   = useState(null);
 
-  const handleSaved = useCallback(() => {
-    setToast(editTarget ? "Gasto atualizado com sucesso!" : "Gasto salvo com sucesso!");
+  const handleSaved = useCallback((tipo = "despesa") => {
+    const noun = tipo === "receita" ? "Recebimento" : "Gasto";
+    const action = editTarget ? "atualizado" : "salvo";
+    setToast(`${noun} ${action} com sucesso!`);
     setEditTarget(null);
     setTab("dashboard");
   }, [editTarget]);
@@ -225,6 +228,9 @@ export default function App() {
                 expenses={expenses}
                 categories={categories}
               />
+            )}
+            {tab === "splitter" && (
+              <FinanceSplitter />
             )}
           </>
         )}

@@ -81,7 +81,10 @@ export default function BudgetManager({ budgets, setBudget, expenses, categories
   const curKey = currentMonthKey();
 
   const spentByCategory = useMemo(() => {
-    const entries = expenses.flatMap((e) => getInstallmentEntries(e)).filter((e) => e.key === curKey);
+    const entries = expenses
+      .filter((e) => e.tipo !== "receita")
+      .flatMap((e) => getInstallmentEntries(e))
+      .filter((e) => e.key === curKey);
     const map = {};
     entries.forEach((e) => { map[e.categoria] = (map[e.categoria] || 0) + e.value; });
     return map;
@@ -90,16 +93,18 @@ export default function BudgetManager({ budgets, setBudget, expenses, categories
   const totalBudget = Object.values(budgets).reduce((s, v) => s + (v || 0), 0);
   const totalSpent  = Object.values(spentByCategory).reduce((s, v) => s + (v || 0), 0);
 
+  const expenseCategories = categories.filter(c => c.tipo !== "receita");
+
   return (
     <div className="tab-enter" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {totalBudget > 0 && (
-        <div className="paper">
-          <div className="paper__inner">
-            <p className="paper__label">Orçamento total do mês</p>
-            <p className="paper__value">{formatBRL(totalBudget)}</p>
-            <p className="paper__foot">
-              Gasto: {formatBRL(totalSpent)} · Restante: {formatBRL(Math.max(0, totalBudget - totalSpent))}
-            </p>
+        <div className="card" style={{ textAlign: "center", padding: "24px 16px" }}>
+          <p className="section-title" style={{ marginBottom: 4 }}>Orçamento total do mês</p>
+          <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 34, fontWeight: 700, color: "var(--gold)" }}>
+            {formatBRL(totalBudget)}
+          </p>
+          <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+            Gasto: {formatBRL(totalSpent)} · Restante: {formatBRL(Math.max(0, totalBudget - totalSpent))}
           </div>
         </div>
       )}
@@ -109,7 +114,7 @@ export default function BudgetManager({ budgets, setBudget, expenses, categories
         <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16, lineHeight: 1.5 }}>
           Defina um limite mensal para cada categoria. A barra de progresso indica quanto você já gastou.
         </p>
-        {categories.map((cat) => (
+        {expenseCategories.map((cat) => (
           <BudgetRow
             key={cat.key}
             cat={cat}

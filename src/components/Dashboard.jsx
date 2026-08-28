@@ -131,7 +131,13 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
   );
   const totalMesDespesas = curEntries.reduce((s, e) => s + e.value, 0);
 
-  // Por categoria (mês atual)
+  const curIncomeEntries = useMemo(
+    () => allEntries.filter((e) => e.key === curKey && e.tipo === "receita"),
+    [allEntries, curKey]
+  );
+  const totalMesReceitas = curIncomeEntries.reduce((s, e) => s + e.value, 0);
+
+  // Por categoria (mês atual) - Despesas
   const byCategory = useMemo(() => {
     const map = {};
     curEntries.forEach((e) => { map[e.categoria] = (map[e.categoria] || 0) + e.value; });
@@ -139,6 +145,15 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
       .map(([key, value]) => ({ key, value, ...catByKey[key] }))
       .sort((a, b) => b.value - a.value);
   }, [curEntries, catByKey]);
+
+  // Por categoria (mês atual) - Receitas
+  const incomeByCategory = useMemo(() => {
+    const map = {};
+    curIncomeEntries.forEach((e) => { map[e.categoria] = (map[e.categoria] || 0) + e.value; });
+    return Object.entries(map)
+      .map(([key, value]) => ({ key, value, ...catByKey[key] }))
+      .sort((a, b) => b.value - a.value);
+  }, [curIncomeEntries, catByKey]);
 
   // Por forma de pagamento (mês atual)
   const byPaymentMethod = useMemo(() => {
@@ -182,30 +197,36 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
     return keys.map((key) => {
       const isFuture = key > curKey;
       const isCurrent = key === curKey;
-      const total = allEntries
-        .filter((e) => e.key === key)
+      const despesas = allEntries
+        .filter((e) => e.key === key && e.tipo !== "receita")
+        .reduce((s, e) => s + e.value, 0);
+      const receitas = allEntries
+        .filter((e) => e.key === key && e.tipo === "receita")
         .reduce((s, e) => s + e.value, 0);
       return {
         key,
         label: monthLabel(key),
-        realizado: isFuture ? 0 : total,
-        projecao: isFuture ? total : 0,
+        realizado: isFuture ? 0 : despesas,
+        projecao: isFuture ? despesas : 0,
+        receitas,
         isFuture,
         isCurrent,
-        total, // para tooltip
+        total: despesas, // para tooltip
       };
     });
   }, [allEntries, curKey]);
 
+  const onlyExpenses = useMemo(() => expenses.filter(e => e.tipo !== "receita"), [expenses]);
+
   // Últimas 5 compras
   const recent = useMemo(
-    () => [...expenses].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5),
-    [expenses]
+    () => [...onlyExpenses].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5),
+    [onlyExpenses]
   );
 
   // Stats rápidas
-  const avgExpense = expenses.length > 0
-    ? expenses.reduce((s, e) => s + e.valor, 0) / expenses.length
+  const avgExpense = onlyExpenses.length > 0
+    ? onlyExpenses.reduce((s, e) => s + e.valor, 0) / onlyExpenses.length
     : 0;
   const topCategory = byCategory[0];
 
@@ -269,8 +290,8 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
       <div className="card tab-enter">
         <div className="empty">
           <span className="empty__icon">💰</span>
-          <p style={{ fontWeight: 600, color: "var(--text)" }}>Nenhum gasto cadastrado</p>
-          <p>Adicione o primeiro gasto na aba <strong>"Novo"</strong>.</p>
+          <p style={{ fontWeight: 600, color: "var(--text)" }}>Nenhum lançamento cadastrado</p>
+          <p>Adicione o primeiro lançamento na aba <strong>"Novo"</strong>.</p>
         </div>
       </div>
     );
@@ -426,7 +447,7 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
       <motion.div className="stat-grid" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
         <div className="stat-card">
           <div className="stat-card__label">Total compras</div>
-          <div className="stat-card__value">{expenses.length}</div>
+          <div className="stat-card__value">{onlyExpenses.length}</div>
           <div className="stat-card__sub">no histórico</div>
         </div>
         <div className="stat-card">
@@ -496,7 +517,7 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
       {/* Pie Chart — Categorias (mês atual) */}
       {byCategory.length > 0 && (
         <div className="card">
-          <p className="section-title">Gastos por categoria — {monthLabel(curKey)}</p>
+          <p className="section-title">Saídas por categoria — {monthLabel(curKey)}</p>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
@@ -532,14 +553,57 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
         </div>
       )}
 
+      {/* Pie Chart — Entradas (mês atual) */}
+      {incomeByCategory.length > 0 && (
+        <div className="card" style={{ border: "1px solid rgba(61, 214, 140, 0.2)" }}>
+          <p className="section-title" style={{ color: "var(--sage)" }}>Entradas por categoria — {monthLabel(curKey)}</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <PieChart>
+              <Pie
+                data={incomeByCategory}
+                dataKey="value"
+                nameKey="label"
+                innerRadius={55}
+                outerRadius={85}
+                paddingAngle={3}
+                strokeWidth={0}
+              >
+                {incomeByCategory.map((c) => <Cell key={c.key} fill={c.color || "var(--sage)"} />)}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div>
+            {incomeByCategory.map((c) => (
+              <div className="legend-row" key={c.key}>
+                <span className="legend-row__dot" style={{ background: c.color || "var(--sage)" }} />
+                <span className="legend-row__label">{c.icon} {c.label}</span>
+                <div className="legend-row__bar-wrap">
+                  <div
+                    className="legend-row__bar"
+                    style={{ background: c.color || "var(--sage)", width: `${Math.round((c.value / totalMesReceitas) * 100)}%` }}
+                  />
+                </div>
+                <span className="legend-row__value" style={{ color: "var(--sage)" }}>+{formatBRL(c.value)}</span>
+                <span className="legend-row__pct">{Math.round((c.value / totalMesReceitas) * 100)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Bar Chart — evolução + projeção futura */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <p className="section-title" style={{ marginBottom: 0 }}>Evolução mensal</p>
           <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--text-dim)" }}>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: "var(--sage)", display: "inline-block" }} />
+              Entradas
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: "#E6B44A", display: "inline-block" }} />
-              Realizado
+              Saídas
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: "#5B8DEF", display: "inline-block", opacity: 0.6 }} />
@@ -576,15 +640,19 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
                 if (!active || !payload?.length) return null;
                 const realizado = payload.find(p => p.dataKey === "realizado")?.value || 0;
                 const projecao  = payload.find(p => p.dataKey === "projecao")?.value || 0;
+                const receitas  = payload.find(p => p.dataKey === "receitas")?.value || 0;
                 return (
                   <div className="chart-tooltip">
                     <div className="chart-tooltip__label">{label}</div>
+                    {receitas > 0 && (
+                      <div className="chart-tooltip__value" style={{ color: "var(--sage)" }}>+{formatBRL(receitas)}</div>
+                    )}
                     {realizado > 0 && (
-                      <div className="chart-tooltip__value">{formatBRL(realizado)}</div>
+                      <div className="chart-tooltip__value">-{formatBRL(realizado)}</div>
                     )}
                     {projecao > 0 && (
                       <div style={{ fontSize: 12, color: "#5B8DEF", marginTop: 2 }}>
-                        Projeção: {formatBRL(projecao)}
+                        Projeção (saídas): {formatBRL(projecao)}
                       </div>
                     )}
                   </div>
@@ -593,6 +661,7 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
             />
             {/* Linha divisória: hoje */}
             <ReferenceLine x={monthLabel(curKey)} stroke="#E6B44A" strokeDasharray="4 3" strokeWidth={1.5} />
+            <Bar dataKey="receitas" fill="var(--sage)" radius={[5, 5, 0, 0]} opacity={0.85} />
             <Bar dataKey="realizado" fill="#E6B44A" radius={[5, 5, 0, 0]} opacity={0.85} />
             <Bar dataKey="projecao"  fill="#5B8DEF" radius={[5, 5, 0, 0]} opacity={0.55} />
             <Line

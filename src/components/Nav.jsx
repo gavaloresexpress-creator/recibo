@@ -5,6 +5,7 @@ const TABS = [
   { key: "dashboard", label: "Painel",     Icon: LayoutDashboard },
   { key: "report",    label: "Relatório",  Icon: Receipt },
   { key: "budget",    label: "Orçamento",  Icon: BarChart3 },
+  { key: "splitter",  label: "Organizar",  Icon: Wallet },
 ];
 
 export default function Nav({ active, onChange }) {
