@@ -38,6 +38,8 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
   const [filterForma,     setFilterForma]     = useState([]);
   const [filterTipo,      setFilterTipo]      = useState([]);
   const [search,          setSearch]          = useState("");
+  const [startDate,       setStartDate]       = useState("");
+  const [endDate,         setEndDate]         = useState("");
 
   const catByKey = useMemo(() => {
     return Object.fromEntries(categories.map((c) => [c.key, c]));
@@ -62,14 +64,16 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       .filter((e) => filterCartao.length === 0    || filterCartao.includes(e.cartao))
       .filter((e) => filterForma.length === 0     || filterForma.includes(e.formaPagamento || "credito"))
       .filter((e) => filterTipo.length === 0      || filterTipo.includes(e.tipo || "despesa"))
+      .filter((e) => !startDate || e.data >= startDate)
+      .filter((e) => !endDate   || e.data <= endDate)
       .filter((e) =>
         !q ||
-        e.descricao.toLowerCase().includes(q) ||
+        (e.descricao || "").toLowerCase().includes(q) ||
         (e.notas || "").toLowerCase().includes(q) ||
-        e.cartao.toLowerCase().includes(q)
+        (e.cartao || "").toLowerCase().includes(q)
       )
       .sort((a, b) => b.data.localeCompare(a.data));
-  }, [expenses, filterMonth, filterCategoria, filterCartao, filterForma, filterTipo, search]);
+  }, [expenses, filterMonth, filterCategoria, filterCartao, filterForma, filterTipo, search, startDate, endDate]);
 
   const faturaMes = useMemo(() => {
     if (filterMonth.length !== 1) return null; // Fatura estimada só faz sentido para 1 mês exato
@@ -211,6 +215,28 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
               />
             </div>
           </div>
+          
+          {/* Período Específico */}
+          <div className="filters__row" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <div style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 6, background: "rgba(13,17,23,0.8)", border: "1.5px solid var(--border)", borderRadius: "var(--r-sm)", padding: "4px 8px" }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>DE:</span>
+              <input 
+                type="date" 
+                style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: 1, fontSize: '13px' }}
+                value={startDate} 
+                onChange={e => setStartDate(e.target.value)} 
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 6, background: "rgba(13,17,23,0.8)", border: "1.5px solid var(--border)", borderRadius: "var(--r-sm)", padding: "4px 8px" }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>ATÉ:</span>
+              <input 
+                type="date" 
+                style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: 1, fontSize: '13px' }}
+                value={endDate} 
+                onChange={e => setEndDate(e.target.value)} 
+              />
+            </div>
+          </div>
           <div className="filters__row" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
             <div style={{ flex: 1, minWidth: "120px" }}>
               <MultiSelect
@@ -250,10 +276,10 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       </div>
 
       {/* Fatura estimada */}
-      {filterMonth !== "todos" && faturaMes !== null && (
+      {filterMonth.length === 1 && faturaMes !== null && (
         <div className="paper">
           <div className="paper__inner">
-            <p className="paper__label">Fatura estimada · {monthLabel(filterMonth)}</p>
+            <p className="paper__label">Fatura estimada · {monthLabel(filterMonth[0])}</p>
             <p className="paper__value">{formatBRL(faturaMes)}</p>
             <p className="paper__foot">Soma das parcelas que vencem neste mês, incluindo compras de meses anteriores</p>
           </div>
