@@ -32,11 +32,11 @@ function exportCSV(data, categories) {
 }
 
 export default function Report({ expenses, cards, categories, onDeleteRequest, onEditRequest }) {
-  const [filterMonth,     setFilterMonth]     = useState("todos");
-  const [filterCategoria, setFilterCategoria] = useState("todos");
-  const [filterCartao,    setFilterCartao]    = useState("todos");
-  const [filterForma,     setFilterForma]     = useState("todos");
-  const [filterTipo,      setFilterTipo]      = useState("todos");
+  const [filterMonth,     setFilterMonth]     = useState([]);
+  const [filterCategoria, setFilterCategoria] = useState([]);
+  const [filterCartao,    setFilterCartao]    = useState([]);
+  const [filterForma,     setFilterForma]     = useState([]);
+  const [filterTipo,      setFilterTipo]      = useState([]);
   const [search,          setSearch]          = useState("");
 
   const catByKey = useMemo(() => {
@@ -57,11 +57,11 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return expenses
-      .filter((e) => filterMonth     === "todos" || monthKeyOf(e.data) === filterMonth)
-      .filter((e) => filterCategoria === "todos" || e.categoria         === filterCategoria)
-      .filter((e) => filterCartao    === "todos" || e.cartao            === filterCartao)
-      .filter((e) => filterForma     === "todos" || (e.formaPagamento || "credito") === filterForma)
-      .filter((e) => filterTipo      === "todos" || (e.tipo || "despesa") === filterTipo)
+      .filter((e) => filterMonth.length === 0     || filterMonth.includes(monthKeyOf(e.data)))
+      .filter((e) => filterCategoria.length === 0 || filterCategoria.includes(e.categoria))
+      .filter((e) => filterCartao.length === 0    || filterCartao.includes(e.cartao))
+      .filter((e) => filterForma.length === 0     || filterForma.includes(e.formaPagamento || "credito"))
+      .filter((e) => filterTipo.length === 0      || filterTipo.includes(e.tipo || "despesa"))
       .filter((e) =>
         !q ||
         e.descricao.toLowerCase().includes(q) ||
@@ -72,15 +72,16 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
   }, [expenses, filterMonth, filterCategoria, filterCartao, filterForma, filterTipo, search]);
 
   const faturaMes = useMemo(() => {
-    if (filterMonth === "todos") return null;
+    if (filterMonth.length !== 1) return null; // Fatura estimada só faz sentido para 1 mês exato
+    const mes = filterMonth[0];
     return allEntries
-      .filter((e) => e.key         === filterMonth)
-      .filter((e) => filterCategoria === "todos" || e.categoria === filterCategoria)
-      .filter((e) => filterCartao    === "todos" || e.cartao    === filterCartao)
+      .filter((e) => e.key === mes)
+      .filter((e) => filterCategoria.length === 0 || filterCategoria.includes(e.categoria))
+      .filter((e) => filterCartao.length === 0    || filterCartao.includes(e.cartao))
       .filter((e) => {
-        if (filterForma === "todos") return true;
+        if (filterForma.length === 0) return true;
         const exp = expenses.find(ex => ex.id === e.id);
-        return (exp?.formaPagamento || "credito") === filterForma;
+        return filterForma.includes(exp?.formaPagamento || "credito");
       })
       .reduce((s, e) => s + e.value, 0);
   }, [allEntries, filterMonth, filterCategoria, filterCartao, filterForma, expenses]);
@@ -95,6 +96,74 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       .map(([key, value]) => ({ key, value, ...catByKey[key] }))
       .sort((a, b) => b.value - a.value);
   }, [filtered, catByKey]);
+
+  // Componente interno para multi-select
+  const MultiSelect = ({ label, options, value, onChange }) => {
+    const [open, setOpen] = useState(false);
+    const isAll = value.length === 0;
+
+    const toggle = (val) => {
+      if (value.includes(val)) {
+        onChange(value.filter(v => v !== val));
+      } else {
+        onChange([...value, val]);
+      }
+    };
+
+    return (
+      <div style={{ position: "relative" }}>
+        <button 
+          type="button"
+          className="select" 
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', background: 'rgba(13,17,23,0.8)' }}
+          onClick={() => setOpen(!open)}
+        >
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
+            {isAll ? label : `${value.length} selec.`}
+          </span>
+          <span style={{ fontSize: '10px', marginLeft: '4px' }}>▼</span>
+        </button>
+
+        {open && (
+          <>
+            <div 
+              style={{ position: 'fixed', inset: 0, zIndex: 9 }} 
+              onClick={() => setOpen(false)}
+            />
+            <div style={{
+              position: "absolute", top: "100%", left: 0, minWidth: "100%", 
+              background: "var(--bg-card)", border: "1px solid var(--border)", 
+              borderRadius: "8px", marginTop: "4px", zIndex: 10,
+              maxHeight: "220px", overflowY: "auto",
+              boxShadow: "var(--shadow-card)", padding: "6px",
+              display: "flex", flexDirection: "column", gap: "2px"
+            }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', cursor: 'pointer', borderBottom: '1px solid var(--border)', marginBottom: '4px' }}>
+                <input 
+                  type="checkbox" 
+                  checked={isAll} 
+                  onChange={() => onChange([])}
+                  style={{ accentColor: 'var(--gold)' }}
+                />
+                <span style={{ fontSize: '13px', fontWeight: 600 }}>Todos</span>
+              </label>
+              {options.map(opt => (
+                <label key={opt.value} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', cursor: 'pointer', borderRadius: '4px' }} className="hover-bg">
+                  <input 
+                    type="checkbox" 
+                    checked={value.includes(opt.value)}
+                    onChange={() => toggle(opt.value)}
+                    style={{ accentColor: 'var(--gold)' }}
+                  />
+                  <span style={{ fontSize: '13px', whiteSpace: 'nowrap' }}>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="tab-enter" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -115,68 +184,49 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
           </div>
           <div className="filters__row">
             <div>
-              <select
-                className="select"
+              <MultiSelect
+                label="Meses"
                 value={filterMonth}
-                onChange={(e) => setFilterMonth(e.target.value)}
-                aria-label="Filtrar por mês"
-              >
-                <option value="todos">Todos os meses</option>
-                {monthsAvailable.map((m) => (
-                  <option key={m} value={m}>{monthLabel(m)}</option>
-                ))}
-              </select>
+                onChange={setFilterMonth}
+                options={monthsAvailable.map(m => ({ value: m, label: monthLabel(m) }))}
+              />
             </div>
             <div>
-              <select
-                className="select"
+              <MultiSelect
+                label="Categorias"
                 value={filterCategoria}
-                onChange={(e) => setFilterCategoria(e.target.value)}
-                aria-label="Filtrar por categoria"
-              >
-                <option value="todos">Todas categorias</option>
-                {categories.map((c) => (
-                  <option key={c.key} value={c.key}>{c.icon} {c.label}</option>
-                ))}
-              </select>
+                onChange={setFilterCategoria}
+                options={categories.map(c => ({ value: c.key, label: `${c.icon} ${c.label}` }))}
+              />
             </div>
             <div>
-              <select
-                className="select"
+              <MultiSelect
+                label="Tipos"
                 value={filterTipo}
-                onChange={(e) => setFilterTipo(e.target.value)}
-                aria-label="Filtrar por tipo"
-              >
-                <option value="todos">Todos os tipos</option>
-                <option value="despesa">Saídas</option>
-                <option value="receita">Entradas</option>
-              </select>
+                onChange={setFilterTipo}
+                options={[
+                  { value: "despesa", label: "Saídas" },
+                  { value: "receita", label: "Entradas" }
+                ]}
+              />
             </div>
           </div>
           <div className="filters__row" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
             <div style={{ flex: 1, minWidth: "120px" }}>
-              <select
-                className="select"
+              <MultiSelect
+                label="Cartões"
                 value={filterCartao}
-                onChange={(e) => setFilterCartao(e.target.value)}
-                aria-label="Filtrar por cartão"
-              >
-                <option value="todos">Todos os cartões</option>
-                {cards.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+                onChange={setFilterCartao}
+                options={cards.map(c => ({ value: c, label: c }))}
+              />
             </div>
             <div style={{ flex: 1, minWidth: "120px" }}>
-              <select
-                className="select"
+              <MultiSelect
+                label="Formas de pag."
                 value={filterForma}
-                onChange={(e) => setFilterForma(e.target.value)}
-                aria-label="Filtrar por forma de pagamento"
-              >
-                <option value="todos">Todas as formas</option>
-                {PAYMENT_METHODS.map((m) => (
-                  <option key={m.key} value={m.key}>{m.icon} {m.label}</option>
-                ))}
-              </select>
+                onChange={setFilterForma}
+                options={PAYMENT_METHODS.map(m => ({ value: m.key, label: `${m.icon} ${m.label}` }))}
+              />
             </div>
           </div>
           
