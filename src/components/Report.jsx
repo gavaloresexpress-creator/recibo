@@ -80,12 +80,16 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
     const mes = filterMonth[0];
     return allEntries
       .filter((e) => e.key === mes)
+      .filter((e) => e.tipo !== "receita") // Não somar entradas/receitas na fatura
       .filter((e) => filterCategoria.length === 0 || filterCategoria.includes(e.categoria))
       .filter((e) => filterCartao.length === 0    || filterCartao.includes(e.cartao))
       .filter((e) => {
-        if (filterForma.length === 0) return true;
         const exp = expenses.find(ex => ex.id === e.id);
-        return filterForma.includes(exp?.formaPagamento || "credito");
+        const forma = exp?.formaPagamento || "credito";
+        if (forma !== "credito") return false; // A fatura é apenas para compras no crédito
+        
+        if (filterForma.length === 0) return true;
+        return filterForma.includes(forma);
       })
       .reduce((s, e) => s + e.value, 0);
   }, [allEntries, filterMonth, filterCategoria, filterCartao, filterForma, expenses]);
@@ -276,12 +280,18 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       </div>
 
       {/* Fatura estimada */}
-      {filterMonth.length === 1 && faturaMes !== null && (
-        <div className="paper">
-          <div className="paper__inner">
-            <p className="paper__label">Fatura estimada · {monthLabel(filterMonth[0])}</p>
-            <p className="paper__value">{formatBRL(faturaMes)}</p>
-            <p className="paper__foot">Soma das parcelas que vencem neste mês, incluindo compras de meses anteriores</p>
+      {filterMonth.length === 1 && faturaMes !== null && !search && !startDate && !endDate && (
+        <div className="card" style={{ background: 'linear-gradient(145deg, var(--bg-card) 0%, var(--bg-elev) 100%)', border: '1px solid var(--border-lg)' }}>
+          <div>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Fatura estimada · {monthLabel(filterMonth[0])}
+            </p>
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '32px', fontWeight: 700, color: 'var(--gold)', marginTop: '4px' }}>
+              {formatBRL(faturaMes)}
+            </p>
+            <p style={{ fontSize: '11.5px', color: 'var(--text-dim)', marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--border)' }}>
+              Soma das parcelas que vencem neste mês, incluindo compras de meses anteriores
+            </p>
           </div>
         </div>
       )}
