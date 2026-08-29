@@ -255,7 +255,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
                 label="Formas de pag."
                 value={filterForma}
                 onChange={setFilterForma}
-                options={PAYMENT_METHODS.map(m => ({ value: m.key, label: `${m.icon} ${m.label}` }))}
+                options={PAYMENT_METHODS.map(m => ({ value: m.key, label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{m.icon} {m.label}</span> }))}
               />
             </div>
           </div>

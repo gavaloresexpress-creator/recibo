@@ -1,3 +1,5 @@
+import PixIcon from "./components/PixIcon";
+
 export const DEFAULT_CATEGORIES = [
   // Despesas
   { key: "alimentacao", label: "Alimentação",  color: "#F0A500", icon: "🍔", tipo: "despesa" },
@@ -23,7 +25,7 @@ export const INSTALLMENT_OPTIONS = [1,2,3,4,5,6,7,8,9,10,11,12,18,24,36,48];
 
 export const PAYMENT_METHODS = [
   { key: "credito",  label: "Crédito",  icon: "💳", color: "#E6B44A" },
-  { key: "pix",      label: "PIX",      icon: "⚡", color: "#3DD68C" },
+  { key: "pix",      label: "PIX",      icon: <PixIcon size={14} />, color: "#3DD68C" },
   { key: "debito",   label: "Débito",   icon: "🏦", color: "#5B8DEF" },
   { key: "dinheiro", label: "Dinheiro", icon: "💵", color: "#84CC16" },
 ];
