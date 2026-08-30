@@ -131,7 +131,7 @@ export default function App() {
 
   const userId = user?.uid ?? null;
 
-  const { expenses, cards, categories, splitterEnvelopes, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes }
+  const { expenses, cards, categories, splitterEnvelopes, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, updateCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes }
     = useExpenseStore(userId);
 
   const { budgets, setBudget }
