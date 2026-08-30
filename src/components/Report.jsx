@@ -247,7 +247,10 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
                 label="Cartões"
                 value={filterCartao}
                 onChange={setFilterCartao}
-                options={cards.map(c => ({ value: c, label: c }))}
+                options={cards.map(c => ({ 
+                  value: typeof c === "object" ? c.id : c, 
+                  label: typeof c === "object" ? c.name : c 
+                }))}
               />
             </div>
             <div style={{ flex: 1, minWidth: "120px" }}>

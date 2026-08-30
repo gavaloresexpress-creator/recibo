@@ -51,14 +51,22 @@ export function getInvoiceMonth(compraData, cartaoObj) {
   if (!cartaoObj) return monthKeyOf(compraData);
   const [y, m, d] = compraData.split("-").map(Number);
   const fechamento = cartaoObj.fechamento || 25;
-  // Se o dia da compra >= dia de fechamento, a compra entra na fatura do próximo mês.
-  // Lembrando que new Date(y, m, 1) cria uma data no mês m+1, pois o mês em Javascript é 0-indexado, 
-  // mas aqui `m` já vem 1-indexado da string (ex: "08"), então `new Date(y, 8, 1)` é 1 de Setembro.
-  if (d >= fechamento) {
-    const nextDate = new Date(y, m, 1);
-    return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`;
+  const vencimento = cartaoObj.vencimento || 1;
+  
+  let offset = 0;
+  // Se o vencimento é menor ou igual ao fechamento, significa que a fatura 
+  // é paga no mês seguinte ao fechamento.
+  if (vencimento <= fechamento) {
+    offset += 1;
   }
-  return `${y}-${String(m).padStart(2, "0")}`;
+  
+  // Se comprou no dia do fechamento ou depois, a compra entra apenas na fatura seguinte.
+  if (d >= fechamento) {
+    offset += 1;
+  }
+  
+  const paymentDate = new Date(y, m - 1 + offset, 1);
+  return `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, "0")}`;
 }
 
 export function getInstallmentEntries(expense, cards = []) {
