@@ -231,7 +231,7 @@ export default function App() {
                 cards={cards}
                 categories={categories}
                 budgets={budgets}
-                setBudget={updateBudget}
+                setBudget={setBudget}
               />
             )}
             {tab === "splitter" && (
