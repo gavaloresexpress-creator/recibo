@@ -146,8 +146,8 @@ export default function App() {
     const noun = tipoStr === "receita" ? "Recebimento" : "Gasto";
     const action = editTarget ? "atualizado" : "salvo";
     setToast(`${noun} ${action} com sucesso!`);
+    setTab(editTarget ? "report" : "dashboard");
     setEditTarget(null);
-    setTab("dashboard");
   }, [editTarget]);
 
   const handleEditRequest = useCallback((expense) => {
