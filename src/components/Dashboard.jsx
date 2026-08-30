@@ -7,7 +7,7 @@ import { Wallet, TrendingUp, TrendingDown, CreditCard, Calendar, Lightbulb, Targ
 import { motion } from "framer-motion";
 
 import {
-  formatBRL, currentMonthKey, monthLabel, shiftMonthKey, getInstallmentEntries, todayISO, formatDateBR
+  formatBRL, currentMonthKey, monthLabel, shiftMonthKey, getInstallmentEntries, todayISO, formatDateBR, getPurchaseEntries
 } from "../utils/format";
 import { PAYMENT_METHODS } from "../constants";
 
@@ -49,6 +49,11 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
   const allEntries = useMemo(
     () => expenses.flatMap((e) => getInstallmentEntries(e, cards)),
     [expenses, cards]
+  );
+
+  const purchaseEntries = useMemo(
+    () => expenses.flatMap((e) => getPurchaseEntries(e)),
+    [expenses]
   );
 
   // ── KPI: total do período ──
@@ -117,24 +122,24 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
     if (!prevRangeStart || !prevRangeEnd) return 0;
     const startKey = prevRangeStart.slice(0, 7);
     const endKey   = prevRangeEnd.slice(0, 7);
-    return allEntries
+    return purchaseEntries
       .filter((e) => e.key >= startKey && e.key <= endKey && e.tipo !== "receita")
       .reduce((s, e) => s + e.value, 0);
-  }, [allEntries, prevRangeStart, prevRangeEnd]);
+  }, [purchaseEntries, prevRangeStart, prevRangeEnd]);
 
   const deltaPercent = totalPrevRangeDespesas > 0
     ? Math.round(((totalDespesas - totalPrevRangeDespesas) / totalPrevRangeDespesas) * 100)
     : null;
 
   const curEntries = useMemo(
-    () => allEntries.filter((e) => e.key === curKey && e.tipo !== "receita"),
-    [allEntries, curKey]
+    () => purchaseEntries.filter((e) => e.key === curKey && e.tipo !== "receita"),
+    [purchaseEntries, curKey]
   );
   const totalMesDespesas = curEntries.reduce((s, e) => s + e.value, 0);
 
   const curIncomeEntries = useMemo(
-    () => allEntries.filter((e) => e.key === curKey && e.tipo === "receita"),
-    [allEntries, curKey]
+    () => purchaseEntries.filter((e) => e.key === curKey && e.tipo === "receita"),
+    [purchaseEntries, curKey]
   );
   const totalMesReceitas = curIncomeEntries.reduce((s, e) => s + e.value, 0);
 

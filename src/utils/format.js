@@ -109,6 +109,39 @@ export function getInstallmentEntries(expense, cards = []) {
   return entries;
 }
 
+export function getPurchaseEntries(expense) {
+  const isRecurring = expense.isRecurring === true;
+  const parcelas = isRecurring ? 24 : Math.max(1, Number(expense.parcelas) || 1);
+  const valorParcela = isRecurring ? Number(expense.valor) : Number(expense.valor) / parcelas;
+
+  let startY, startM;
+  if (expense.mesInicioParcelas) {
+    [startY, startM] = expense.mesInicioParcelas.split("-").map(Number);
+  } else if (expense.data) {
+    [startY, startM] = expense.data.split("-").map(Number);
+  } else {
+    return [];
+  }
+
+  const entries = [];
+  for (let i = 0; i < parcelas; i++) {
+    const dt = new Date(startY, startM - 1 + i, 1);
+    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    entries.push({
+      key,
+      value: valorParcela,
+      categoria: expense.categoria,
+      cartao: expense.cartao,
+      id: expense.id,
+      tipo: expense.tipo || "despesa",
+      installmentIndex: i + 1,
+      totalInstallments: isRecurring ? "∞" : parcelas,
+      isRecurring,
+    });
+  }
+  return entries;
+}
+
 // Mascara monetária: converte "123456" → "1.234,56"
 export function maskCurrency(raw) {
   const digits = raw.replace(/\D/g, "");
