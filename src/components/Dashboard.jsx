@@ -3,11 +3,11 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart, ReferenceLine,
 } from "recharts";
-import { Wallet, TrendingUp, TrendingDown, CreditCard, Calendar, Lightbulb, Target } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, CreditCard, Calendar, Lightbulb, Target, X } from "lucide-react";
 import { motion } from "framer-motion";
 
 import {
-  formatBRL, currentMonthKey, monthLabel, shiftMonthKey, getInstallmentEntries, todayISO,
+  formatBRL, currentMonthKey, monthLabel, shiftMonthKey, getInstallmentEntries, todayISO, formatDateBR
 } from "../utils/format";
 import { PAYMENT_METHODS } from "../constants";
 
@@ -39,6 +39,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
   // --- Estado do seletor de período ---
   const [rangeStart, setRangeStart] = useState(firstOfCurrentMonth());
   const [rangeEnd,   setRangeEnd]   = useState(today);
+  const [selectedChartMonth, setSelectedChartMonth] = useState(null);
 
   const catByKey = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.key, c])),
@@ -668,9 +669,9 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
             />
             {/* Linha divisória: hoje */}
             <ReferenceLine x={monthLabel(curKey)} stroke="#E6B44A" strokeDasharray="4 3" strokeWidth={1.5} />
-            <Bar dataKey="receitas" fill="var(--sage)" radius={[5, 5, 0, 0]} opacity={0.85} />
-            <Bar dataKey="realizado" fill="#E6B44A" radius={[5, 5, 0, 0]} opacity={0.85} />
-            <Bar dataKey="projecao"  fill="#5B8DEF" radius={[5, 5, 0, 0]} opacity={0.55} />
+            <Bar dataKey="receitas" fill="var(--sage)" radius={[5, 5, 0, 0]} opacity={0.85} onClick={(data) => setSelectedChartMonth(data.payload?.key || data.activePayload?.[0]?.payload?.key)} style={{ cursor: "pointer" }} />
+            <Bar dataKey="realizado" fill="#E6B44A" radius={[5, 5, 0, 0]} opacity={0.85} onClick={(data) => setSelectedChartMonth(data.payload?.key || data.activePayload?.[0]?.payload?.key)} style={{ cursor: "pointer" }} />
+            <Bar dataKey="projecao"  fill="#5B8DEF" radius={[5, 5, 0, 0]} opacity={0.55} onClick={(data) => setSelectedChartMonth(data.payload?.key || data.activePayload?.[0]?.payload?.key)} style={{ cursor: "pointer" }} />
             <Line
               type="monotone"
               dataKey="realizado"
@@ -682,9 +683,50 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
           </ComposedChart>
         </ResponsiveContainer>
         <p style={{ fontSize: 11, color: "var(--text-dim)", textAlign: "center", marginTop: 4 }}>
-          Barras azuis = projeção de parcelas futuras
+          Barras azuis = projeção de parcelas futuras (clique em qualquer barra para ver detalhes)
         </p>
       </div>
+
+      {selectedChartMonth && (
+        <div className="card" style={{ marginTop: 0 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <p className="section-title" style={{ marginBottom: 0 }}>
+              Detalhes de {monthLabel(selectedChartMonth)}
+            </p>
+            <button type="button" className="icon-btn" onClick={() => setSelectedChartMonth(null)}><X size={16} /></button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 300, overflowY: "auto", paddingRight: 4 }}>
+            {allEntries
+              .filter(e => e.key === selectedChartMonth && e.tipo !== "receita")
+              .map((e, idx) => {
+                const exp = expenses.find(ex => ex.id === e.id);
+                if (!exp) return null;
+                const cat = categories.find(c => c.key === e.categoria);
+                return (
+                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 8 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <span style={{ fontSize: 16 }}>{cat?.icon}</span>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{exp.descricao}</div>
+                        <div style={{ color: "var(--text-dim)", fontSize: 10 }}>
+                          Compra em {formatDateBR(exp.data)} • Parcela {e.installmentIndex}/{e.totalInstallments}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 600, color: "var(--rust)" }}>
+                      -{formatBRL(e.value)}
+                    </div>
+                  </div>
+                );
+              })}
+              {allEntries.filter(e => e.key === selectedChartMonth && e.tipo !== "receita").length === 0 && (
+                <div style={{ textAlign: "center", color: "var(--text-dim)", fontSize: 12, padding: 12 }}>
+                  Nenhuma despesa para este mês.
+                </div>
+              )}
+          </div>
+        </div>
+      )}
 
       {/* Por Forma de Pagamento */}
       {byPaymentMethod.length > 0 && (
