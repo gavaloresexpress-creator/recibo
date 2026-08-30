@@ -68,7 +68,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
         totalReceitas += exp.valor;
       } else {
         if (parcelas > 1) {
-          parcelado    += exp.valor / parcelas; // só a parcela deste período
+          parcelado    += exp.valor / parcelas; // Volta a ser a parcela do mês
           numParceladas += 1;
         } else {
           avista += exp.valor;
@@ -414,15 +414,22 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
 
         {/* Detalhamento das saídas (à vista vs parcelado) */}
         {totalDespesas > 0 && (
-          <div style={{ display: "flex", gap: 8, marginTop: 4, flexWrap: "wrap" }}>
-            {rangeAvista > 0 && (
-              <span style={{ fontSize: 11, color: "var(--text-dim)", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>
-                À vista: {formatBRL(rangeAvista)}
-              </span>
-            )}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4, marginBottom: 8 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {rangeAvista > 0 && (
+                <span style={{ fontSize: 11, color: "var(--text-dim)", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>
+                  À vista: {formatBRL(rangeAvista)}
+                </span>
+              )}
+              {rangeParcelado > 0 && (
+                <span style={{ fontSize: 11, color: "var(--text-dim)", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>
+                  Parcelas (cota do mês): {formatBRL(rangeParcelado)}
+                </span>
+              )}
+            </div>
             {rangeParcelado > 0 && (
-              <span style={{ fontSize: 11, color: "var(--text-dim)", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>
-                Parcelas: {formatBRL(rangeParcelado)}
+              <span style={{ fontSize: 10, color: "var(--text-muted)", fontStyle: "italic" }}>
+                * O Painel soma apenas o valor da parcela mensal. O Relatório mostra o valor total da dívida.
               </span>
             )}
           </div>
