@@ -47,7 +47,18 @@ export function useExpenseStore(userId) {
 
     // Carrega cartões (documento único)
     getDoc(cardsDoc(userId)).then((snap) => {
-      if (snap.exists()) setCards(snap.data().list || DEFAULT_CARDS);
+      if (snap.exists()) {
+        const userCards = snap.data().list || DEFAULT_CARDS;
+        // Migra cartões antigos (strings) para objetos
+        const migrated = userCards.map(c => 
+          typeof c === "string" 
+            ? { id: c, name: c, fechamento: 25, vencimento: 1 } 
+            : c
+        );
+        setCards(migrated);
+      } else {
+        setCards(DEFAULT_CARDS);
+      }
     });
 
     // Carrega categorias (documento único)
@@ -132,10 +143,9 @@ export function useExpenseStore(userId) {
   }, [userId, expenses]);
 
   // ── Adicionar cartão ─────────────────────────────────────────
-  const addCard = useCallback(async (name) => {
-    const trimmed = name.trim();
-    if (!trimmed || cards.includes(trimmed) || !userId) return;
-    const newList = [...cards, trimmed];
+  const addCard = useCallback(async (cardObj) => {
+    if (!userId || !cardObj || cards.find(c => c.id === cardObj.id)) return;
+    const newList = [...cards, cardObj];
     setCards(newList);
     try {
       await setDoc(cardsDoc(userId), { list: newList }, { merge: true });
@@ -145,14 +155,26 @@ export function useExpenseStore(userId) {
   }, [userId, cards]);
 
   // ── Remover cartão ───────────────────────────────────────────
-  const removeCard = useCallback(async (name) => {
+  const removeCard = useCallback(async (id) => {
     if (!userId) return;
-    const newList = cards.filter((c) => c !== name);
+    const newList = cards.filter((c) => c.id !== id);
     setCards(newList);
     try {
       await setDoc(cardsDoc(userId), { list: newList }, { merge: true });
     } catch (err) {
       console.error("removeCard error:", err);
+    }
+  }, [userId, cards]);
+
+  // ── Atualizar cartão ─────────────────────────────────────────
+  const updateCard = useCallback(async (id, newData) => {
+    if (!userId) return;
+    const newList = cards.map((c) => (c.id === id ? { ...c, ...newData } : c));
+    setCards(newList);
+    try {
+      await setDoc(cardsDoc(userId), { list: newList }, { merge: true });
+    } catch (err) {
+      console.error("updateCard error:", err);
     }
   }, [userId, cards]);
 
@@ -203,5 +225,5 @@ export function useExpenseStore(userId) {
     }
   }, [userId]);
 
-  return { expenses, cards, categories, splitterEnvelopes, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes };
+  return { expenses, cards, categories, splitterEnvelopes, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, updateCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes };
 }

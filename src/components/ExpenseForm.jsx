@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, X, CreditCard, Eye, EyeOff } from "lucide-react";
+import { Plus, X, CreditCard, Eye, EyeOff, Settings, Trash2 } from "lucide-react";
 import { INSTALLMENT_OPTIONS, PAYMENT_METHODS } from "../constants";
 import {
   todayISO, formatBRL, maskCurrency, currencyToNumber,
@@ -48,13 +48,13 @@ function AutocompleteInput({ value, onChange, suggestions, placeholder, classNam
   );
 }
 
-export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddCard, addCategory, updateCategory, deleteCategory, onSaved, initialExpense, onCancelEdit }) {
+export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddCard, onUpdateCard, onRemoveCard, addCategory, updateCategory, deleteCategory, onSaved, initialExpense, onCancelEdit }) {
   const [valorMasked, setValorMasked] = useState("");
   const [data, setData]               = useState(todayISO());
   const [descricao, setDescricao]     = useState("");
   const [notas, setNotas]             = useState("");
   const [categoria, setCategoria]     = useState(categories[0]?.key || "");
-  const [cartao, setCartao]           = useState(cards[0] || "");
+  const [cartao, setCartao]           = useState(cards[0]?.id || cards[0] || "");
   const [parcelas, setParcelas]       = useState(1);
   const [mesInicioParcelas, setMesInicioParcelas] = useState(() => {
     // Default: próximo mês
@@ -63,6 +63,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
   const [showAddCard, setShowAddCard] = useState(false);
+  const [showCardManager, setShowCardManager] = useState(false);
   const [newCard, setNewCard]         = useState("");
   const [errors, setErrors]           = useState({});
   const [showPreview, setShowPreview] = useState(false);
@@ -100,7 +101,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
   }, [initialExpense]);
 
   useEffect(() => {
-    if (!cartao && cards.length && !initialExpense) setCartao(cards[0]);
+    if (!cartao && cards.length && !initialExpense) setCartao(cards[0]?.id || cards[0]);
   }, [cards, cartao, initialExpense]);
 
   const valor = currencyToNumber(valorMasked);
@@ -430,6 +431,66 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
         <label className="field__label">
           <CreditCard size={13} /> Cartão utilizado
         </label>
+        
+        {showCardManager && (
+          <div style={{ padding: 12, background: "rgba(0,0,0,0.2)", borderRadius: 8, marginBottom: 12, border: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gold)" }}>Gerenciar Cartões</span>
+              <button type="button" onClick={() => setShowCardManager(false)} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}><X size={16} /></button>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {cards.map(c => {
+                const isObj = typeof c === "object";
+                const id = isObj ? c.id : c;
+                const name = isObj ? c.name : c;
+                const fechamento = isObj ? c.fechamento : 25;
+                const vencimento = isObj ? c.vencimento : 1;
+                
+                return (
+                  <div key={id} style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(255,255,255,0.05)", padding: 8, borderRadius: 6 }}>
+                    <input 
+                      className="input" 
+                      style={{ flex: 1, padding: "4px 8px", fontSize: 13 }} 
+                      value={name}
+                      onChange={e => onUpdateCard(id, { name: e.target.value })}
+                      placeholder="Nome do cartão"
+                    />
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 10, color: "var(--text-muted)", width: 40, textAlign: "right" }}>Fecha:</span>
+                      <input 
+                        type="number" className="input" min="1" max="31"
+                        style={{ width: 44, padding: "4px", fontSize: 13, textAlign: "center" }}
+                        value={fechamento}
+                        onChange={e => onUpdateCard(id, { fechamento: Number(e.target.value) })}
+                      />
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 10, color: "var(--text-muted)", width: 40, textAlign: "right" }}>Vence:</span>
+                      <input 
+                        type="number" className="input" min="1" max="31"
+                        style={{ width: 44, padding: "4px", fontSize: 13, textAlign: "center" }}
+                        value={vencimento}
+                        onChange={e => onUpdateCard(id, { vencimento: Number(e.target.value) })}
+                      />
+                    </div>
+                    <button type="button" onClick={() => {
+                      if (window.confirm(`Tem certeza que deseja remover o cartão ${name}?`)) {
+                        onRemoveCard(id);
+                        if (cartao === id) setCartao(cards[0]?.id || "");
+                      }
+                    }} style={{ color: "var(--rust)", background: "none", border: "none", cursor: "pointer", padding: 4 }}><Trash2 size={14} /></button>
+                  </div>
+                )
+              })}
+            </div>
+            
+            <button type="button" className="btn-secondary" style={{ width: "100%", marginTop: 12, padding: "6px 0", fontSize: 13 }} onClick={() => setShowAddCard(true)}>
+              <Plus size={14} style={{ marginRight: 4 }} /> Adicionar novo cartão
+            </button>
+          </div>
+        )}
+
         {!showAddCard ? (
           <div className="card-row">
             <select
@@ -438,15 +499,19 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
               onChange={(e) => setCartao(e.target.value)}
               aria-label="Selecionar cartão"
             >
-              {cards.map((c) => <option key={c} value={c}>{c}</option>)}
+              {cards.map((c) => {
+                const isObj = typeof c === "object";
+                return <option key={isObj ? c.id : c} value={isObj ? c.id : c}>{isObj ? c.name : c}</option>
+              })}
             </select>
             <button
               type="button"
               className="icon-btn"
-              onClick={() => setShowAddCard(true)}
-              aria-label="Adicionar novo cartão"
+              onClick={() => setShowCardManager(!showCardManager)}
+              aria-label="Gerenciar cartões"
+              title="Configurar fechamento/vencimento"
             >
-              <Plus size={18} />
+              <Settings size={18} />
             </button>
           </div>
         ) : (
@@ -456,10 +521,26 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
               placeholder="Nome do novo cartão"
               value={newCard}
               onChange={(e) => setNewCard(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddCard()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newCard.trim()) {
+                  const id = newCard.trim().toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
+                  onAddCard({ id, name: newCard.trim(), fechamento: 25, vencimento: 1 });
+                  setCartao(id);
+                  setNewCard("");
+                  setShowAddCard(false);
+                }
+              }}
               autoFocus
             />
-            <button type="button" className="icon-btn" onClick={handleAddCard} aria-label="Confirmar cartão">
+            <button type="button" className="icon-btn" onClick={() => {
+              if (newCard.trim()) {
+                const id = newCard.trim().toLowerCase().replace(/\s+/g, "_") + "_" + Date.now();
+                onAddCard({ id, name: newCard.trim(), fechamento: 25, vencimento: 1 });
+                setCartao(id);
+                setNewCard("");
+                setShowAddCard(false);
+              }
+            }} aria-label="Confirmar cartão">
               <Plus size={18} />
             </button>
             <button type="button" className="icon-btn icon-btn--danger" onClick={() => setShowAddCard(false)} aria-label="Cancelar">

@@ -77,13 +77,13 @@ function BudgetRow({ cat, budget, spent, onSave }) {
   );
 }
 
-export default function BudgetManager({ budgets, setBudget, expenses, categories }) {
+export default function BudgetManager({ budgets, setBudget, expenses, categories, cards = [] }) {
   const curKey = currentMonthKey();
 
   const spentByCategory = useMemo(() => {
     const entries = expenses
       .filter((e) => e.tipo !== "receita")
-      .flatMap((e) => getInstallmentEntries(e))
+      .flatMap((e) => getInstallmentEntries(e, cards))
       .filter((e) => e.key === curKey);
     const map = {};
     entries.forEach((e) => { map[e.categoria] = (map[e.categoria] || 0) + e.value; });

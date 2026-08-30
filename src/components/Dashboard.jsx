@@ -32,7 +32,7 @@ function firstOfCurrentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
-export default function Dashboard({ expenses, categories, budgets = {} }) {
+export default function Dashboard({ expenses, categories, cards = [], budgets = {} }) {
   const curKey = currentMonthKey();
   const today = todayISO();
 
@@ -46,8 +46,8 @@ export default function Dashboard({ expenses, categories, budgets = {} }) {
   );
 
   const allEntries = useMemo(
-    () => expenses.flatMap((e) => getInstallmentEntries(e)),
-    [expenses]
+    () => expenses.flatMap((e) => getInstallmentEntries(e, cards)),
+    [expenses, cards]
   );
 
   // ── KPI: total do período ──

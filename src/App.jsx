@@ -200,6 +200,8 @@ export default function App() {
                 expenses={expenses}
                 onAdd={editTarget ? (data) => updateExpense(editTarget.id, data) : addExpense}
                 onAddCard={addCard}
+                onUpdateCard={updateCard}
+                onRemoveCard={removeCard}
                 addCategory={addCategory}
                 updateCategory={updateCategory}
                 deleteCategory={deleteCategory}
@@ -212,7 +214,7 @@ export default function App() {
               />
             )}
             {tab === "dashboard" && (
-              <Dashboard expenses={expenses} categories={categories} budgets={budgets} />
+              <Dashboard expenses={expenses} categories={categories} cards={cards} budgets={budgets} />
             )}
             {tab === "report" && (
               <Report
@@ -225,10 +227,11 @@ export default function App() {
             )}
             {tab === "budget" && (
               <BudgetManager
-                budgets={budgets}
-                setBudget={setBudget}
                 expenses={expenses}
+                cards={cards}
                 categories={categories}
+                budgets={budgets}
+                setBudget={updateBudget}
               />
             )}
             {tab === "splitter" && (

@@ -18,7 +18,11 @@ export const DEFAULT_CATEGORIES = [
   { key: "renda_extra", label: "Renda Extra",  color: "#F59E0B", icon: "🎁", tipo: "receita" },
 ];
 
-export const DEFAULT_CARDS = ["Nubank", "Inter", "Itaú"];
+export const DEFAULT_CARDS = [
+  { id: "Nubank", name: "Nubank", fechamento: 25, vencimento: 1 },
+  { id: "Inter", name: "Inter", fechamento: 28, vencimento: 5 },
+  { id: "Itaú", name: "Itaú", fechamento: 5, vencimento: 15 },
+];
 
 export const INSTALLMENT_OPTIONS = [1,2,3,4,5,6,7,8,9,10,11,12,18,24,36,48];
 

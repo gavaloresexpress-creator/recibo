@@ -46,8 +46,8 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
   }, [categories]);
 
   const allEntries = useMemo(
-    () => expenses.flatMap((e) => getInstallmentEntries(e)),
-    [expenses]
+    () => expenses.flatMap((e) => getInstallmentEntries(e, cards)),
+    [expenses, cards]
   );
 
   const monthsAvailable = useMemo(() => {
@@ -412,22 +412,50 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       {byCategory.length > 0 && (
         <div className="card">
           <p className="section-title">Resumo por categoria</p>
-          {byCategory.map((c) => (
-            <div className="legend-row" key={c.key}>
-              <span className="legend-row__dot" style={{ background: c.color }} />
-              <span className="legend-row__label">{c.icon} {c.label}</span>
-              <div style={{ flex: 1, padding: "0 10px" }}>
-                <div className="progress-wrap" style={{ height: 5 }}>
-                  <div
-                    className="progress-bar progress-bar--ok"
-                    style={{ background: c.color, width: `${Math.round((c.value / totalCompras) * 100)}%` }}
-                  />
+          
+          {byCategory.filter(c => c.tipo !== "receita").length > 0 && (
+            <div style={{ marginBottom: byCategory.filter(c => c.tipo === "receita").length > 0 ? 16 : 0 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Saídas</p>
+              {byCategory.filter(c => c.tipo !== "receita").map((c) => (
+                <div className="legend-row" key={c.key}>
+                  <span className="legend-row__dot" style={{ background: c.color }} />
+                  <span className="legend-row__label">{c.icon} {c.label}</span>
+                  <div style={{ flex: 1, padding: "0 10px" }}>
+                    <div className="progress-wrap" style={{ height: 5 }}>
+                      <div
+                        className="progress-bar progress-bar--ok"
+                        style={{ background: c.color, width: `${Math.round((c.value / totalCompras) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="legend-row__value">{formatBRL(c.value)}</span>
+                  <span className="legend-row__pct">{Math.round((c.value / totalCompras) * 100)}%</span>
                 </div>
-              </div>
-              <span className="legend-row__value">{formatBRL(c.value)}</span>
-              <span className="legend-row__pct">{Math.round((c.value / totalCompras) * 100)}%</span>
+              ))}
             </div>
-          ))}
+          )}
+
+          {byCategory.filter(c => c.tipo === "receita").length > 0 && (
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Entradas</p>
+              {byCategory.filter(c => c.tipo === "receita").map((c) => (
+                <div className="legend-row" key={c.key}>
+                  <span className="legend-row__dot" style={{ background: c.color }} />
+                  <span className="legend-row__label">{c.icon} {c.label}</span>
+                  <div style={{ flex: 1, padding: "0 10px" }}>
+                    <div className="progress-wrap" style={{ height: 5 }}>
+                      <div
+                        className="progress-bar progress-bar--ok"
+                        style={{ background: c.color, width: `${totalReceitas > 0 ? Math.round((c.value / totalReceitas) * 100) : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="legend-row__value">{formatBRL(c.value)}</span>
+                  <span className="legend-row__pct">{totalReceitas > 0 ? Math.round((c.value / totalReceitas) * 100) : 0}%</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

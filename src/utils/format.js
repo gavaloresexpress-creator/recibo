@@ -46,16 +46,34 @@ export function shiftMonthKey(key, delta) {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export function getInstallmentEntries(expense) {
+export function getInvoiceMonth(compraData, cartaoObj) {
+  if (!compraData) return "";
+  if (!cartaoObj) return monthKeyOf(compraData);
+  const [y, m, d] = compraData.split("-").map(Number);
+  const fechamento = cartaoObj.fechamento || 25;
+  // Se o dia da compra >= dia de fechamento, a compra entra na fatura do próximo mês.
+  // Lembrando que new Date(y, m, 1) cria uma data no mês m+1, pois o mês em Javascript é 0-indexado, 
+  // mas aqui `m` já vem 1-indexado da string (ex: "08"), então `new Date(y, 8, 1)` é 1 de Setembro.
+  if (d >= fechamento) {
+    const nextDate = new Date(y, m, 1);
+    return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, "0")}`;
+  }
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
+export function getInstallmentEntries(expense, cards = []) {
   const isRecurring = expense.isRecurring === true;
   // Se for recorrente, projeta para os próximos 24 meses (para aparecer nos gráficos/dashboards).
   const parcelas = isRecurring ? 24 : Math.max(1, Number(expense.parcelas) || 1);
   const valorParcela = isRecurring ? Number(expense.valor) : Number(expense.valor) / parcelas;
 
-  // Usa mesInicioParcelas se definido (ex: compra feita após fechamento da fatura),
-  // caso contrário usa o mês da data da compra
   let startY, startM;
-  if (expense.mesInicioParcelas) {
+  // 1. Se tem cartão, tenta calcular o mês inicial usando a lógica de fechamento da fatura
+  if (expense.formaPagamento === "credito" && expense.cartao && expense.data) {
+    const cardObj = cards.find(c => c.id === expense.cartao || c.name === expense.cartao);
+    const invoiceMonth = getInvoiceMonth(expense.data, cardObj);
+    [startY, startM] = invoiceMonth.split("-").map(Number);
+  } else if (expense.mesInicioParcelas) {
     [startY, startM] = expense.mesInicioParcelas.split("-").map(Number);
   } else {
     [startY, startM] = expense.data.split("-").map(Number);
