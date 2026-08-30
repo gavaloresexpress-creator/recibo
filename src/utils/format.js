@@ -77,7 +77,10 @@ export function getInstallmentEntries(expense, cards = []) {
 
   let startY, startM;
   // 1. Se tem cartão, tenta calcular o mês inicial usando a lógica de fechamento da fatura
-  if (expense.formaPagamento === "credito" && expense.cartao && expense.data) {
+  // Tratamento de legado: gastos antigos podem não ter 'formaPagamento' salvo no banco.
+  const isCredit = expense.formaPagamento === "credito" || (!expense.formaPagamento && expense.cartao);
+  
+  if (isCredit && expense.cartao && expense.data) {
     const cardObj = cards.find(c => c.id === expense.cartao || c.name === expense.cartao);
     const invoiceMonth = getInvoiceMonth(expense.data, cardObj);
     [startY, startM] = invoiceMonth.split("-").map(Number);
