@@ -695,6 +695,9 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
             </p>
             <button type="button" className="icon-btn" onClick={() => setSelectedChartMonth(null)}><X size={16} /></button>
           </div>
+          <p style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 12, fontStyle: "italic", lineHeight: 1.4 }}>
+            * Lembre-se: as faturas de cartão exibidas aqui são aquelas que <strong>vencem</strong> neste mês. Portanto, a grande maioria dos gastos listados abaixo foi realizada no mês (ou ciclo) anterior.
+          </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 300, overflowY: "auto", paddingRight: 4 }}>
             {allEntries
               .filter(e => e.key === selectedChartMonth && e.tipo !== "receita")
