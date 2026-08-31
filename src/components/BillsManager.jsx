@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { formatBRL, currentMonthKey, todayISO, maskCurrency, currencyToNumber, monthLabel, shiftMonthKey } from "../utils/format";
-import { Check, Clock, AlertCircle, Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, Clock, AlertCircle, Plus, X, ChevronLeft, ChevronRight, Edit3 } from "lucide-react";
 
 export default function BillsManager({ bills, addBill, updateBill, deleteBill, categories, addExpense }) {
   const [showForm, setShowForm] = useState(false);
@@ -126,6 +126,20 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
     }
   }
 
+  function handleEdit(bill) {
+    setEditingId(bill.id);
+    setDescricao(bill.descricao);
+    setValorMasked(maskCurrency(bill.valor.toFixed(2)));
+    setCategoria(bill.categoria);
+    setIsRecurring(bill.isRecurring || false);
+    if (bill.isRecurring) {
+      setDiaVencimento(bill.diaVencimento);
+    } else {
+      setDataVencimento(bill.dataVencimento || todayISO());
+    }
+    setShowForm(true);
+  }
+
   const { totalBillsMonth, totalPaidMonth, totalRemainingMonth } = useMemo(() => {
     let total = 0;
     let paid = 0;
@@ -201,9 +215,37 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
             </select>
           </div>
 
-          <div className="form-group" style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
-            <input type="checkbox" id="recur" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} />
-            <label htmlFor="recur" style={{ fontSize: 14 }}>Conta mensal fixa (recorrente)</label>
+          <div className="form-group" style={{ marginBottom: 16 }}>
+            <div 
+              onClick={() => setIsRecurring(!isRecurring)}
+              style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "space-between",
+                padding: "14px 16px",
+                background: isRecurring ? "rgba(230,180,74,0.1)" : "var(--bg-card)",
+                border: `1px solid ${isRecurring ? "rgba(230,180,74,0.4)" : "var(--border)"}`,
+                borderRadius: 8,
+                cursor: "pointer",
+                transition: "all 0.2s ease"
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ 
+                  width: 20, height: 20, 
+                  borderRadius: 6, 
+                  background: isRecurring ? "var(--gold)" : "transparent",
+                  border: `2px solid ${isRecurring ? "var(--gold)" : "var(--border)"}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: "all 0.2s ease"
+                }}>
+                  {isRecurring && <Check size={14} color="#1A1000" strokeWidth={4} />}
+                </div>
+                <span style={{ fontSize: 14, fontWeight: isRecurring ? 600 : 400, color: isRecurring ? "var(--gold)" : "var(--text)" }}>
+                  Conta mensal fixa (recorrente)
+                </span>
+              </div>
+            </div>
           </div>
 
           {isRecurring ? (
@@ -237,7 +279,7 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {overdueBills.map(b => (
-              <BillRow key={b.id} bill={b} onPay={() => handleMarkAsPaid(b)} onDelete={() => handleDelete(b)} />
+              <BillRow key={b.id} bill={b} onPay={() => handleMarkAsPaid(b)} onDelete={() => handleDelete(b)} onEdit={() => handleEdit(b)} />
             ))}
           </div>
         </div>
@@ -250,7 +292,7 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {upcomingBills.map(b => (
-              <BillRow key={b.id} bill={b} onPay={() => handleMarkAsPaid(b)} onDelete={() => handleDelete(b)} />
+              <BillRow key={b.id} bill={b} onPay={() => handleMarkAsPaid(b)} onDelete={() => handleDelete(b)} onEdit={() => handleEdit(b)} />
             ))}
           </div>
         </div>
@@ -263,7 +305,7 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {paidBills.map(b => (
-              <BillRow key={b.id} bill={b} onPay={null} isPaid onDelete={() => handleDelete(b)} />
+              <BillRow key={b.id} bill={b} onPay={null} isPaid onDelete={() => handleDelete(b)} onEdit={() => handleEdit(b)} />
             ))}
           </div>
         </div>
@@ -272,7 +314,7 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
   );
 }
 
-function BillRow({ bill, onPay, isPaid, onDelete }) {
+function BillRow({ bill, onPay, isPaid, onDelete, onEdit }) {
   const parts = bill.dueDateStr.split("-");
   const displayDate = `${parts[2]}/${parts[1]}`;
   
@@ -298,6 +340,9 @@ function BillRow({ bill, onPay, isPaid, onDelete }) {
             <Check size={14} /> Pagar
           </button>
         )}
+        <button onClick={onEdit} style={{ background: "transparent", border: "none", color: "var(--text-muted)", cursor: "pointer", padding: "4px" }} title="Editar">
+          <Edit3 size={14} />
+        </button>
         <button onClick={onDelete} style={{ background: "transparent", border: "none", color: "var(--rust)", cursor: "pointer", padding: "4px" }} title="Excluir">
           <X size={14} />
         </button>
