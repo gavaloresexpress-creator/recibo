@@ -143,9 +143,9 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
       )}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600 }}>Contas a Pagar</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 600, whiteSpace: "nowrap" }}>Contas a Pagar</h2>
         {!showForm && (
-          <button className="btn-primary" onClick={() => setShowForm(true)} style={{ padding: "8px 12px", fontSize: 13 }}>
+          <button className="btn-primary" onClick={() => setShowForm(true)} style={{ padding: "8px 12px", fontSize: 13, width: "auto", display: "flex", alignItems: "center", gap: 6, margin: 0 }}>
             <Plus size={16} /> Nova Conta
           </button>
         )}

@@ -244,6 +244,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
     const curKey = currentMonthKey();
     const unpaidCount = bills.filter(bill => {
       if (bill.isRecurring) {
+        if (bill.startMonth && curKey < bill.startMonth) return false;
         return !(bill.paidMonths || []).includes(curKey);
       } else {
         return !bill.paid && bill.dataVencimento && bill.dataVencimento.startsWith(curKey);
