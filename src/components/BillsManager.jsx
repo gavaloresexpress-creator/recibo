@@ -126,6 +126,21 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
     }
   }
 
+  const { totalBillsMonth, totalPaidMonth, totalRemainingMonth } = useMemo(() => {
+    let total = 0;
+    let paid = 0;
+    let remaining = 0;
+    currentMonthBills.forEach(bill => {
+      total += bill.valor;
+      if (bill.isPaid) {
+        paid += bill.valor;
+      } else {
+        remaining += bill.valor;
+      }
+    });
+    return { totalBillsMonth: total, totalPaidMonth: paid, totalRemainingMonth: remaining };
+  }, [currentMonthBills]);
+
   return (
     <div className="tab-enter" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       
@@ -143,7 +158,16 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
       )}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, whiteSpace: "nowrap" }}>Contas a Pagar</h2>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 600, whiteSpace: "nowrap" }}>Contas a Pagar</h2>
+          {!showForm && currentMonthBills.length > 0 && (
+            <div style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+              <span>Total: <strong style={{ color: "var(--text)" }}>{formatBRL(totalBillsMonth)}</strong></span>
+              <span>Pago: <strong style={{ color: "var(--sage)" }}>{formatBRL(totalPaidMonth)}</strong></span>
+              <span>Falta pagar: <strong style={{ color: "var(--gold)" }}>{formatBRL(totalRemainingMonth)}</strong></span>
+            </div>
+          )}
+        </div>
         {!showForm && (
           <button className="btn-primary" onClick={() => setShowForm(true)} style={{ padding: "8px 12px", fontSize: 13, width: "auto", display: "flex", alignItems: "center", gap: 6, margin: 0 }}>
             <Plus size={16} /> Nova Conta
