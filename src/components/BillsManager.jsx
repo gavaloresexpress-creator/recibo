@@ -84,15 +84,23 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
     if (editingId) {
       updateBill(editingId, payload);
     } else {
-      if (isRecurring) payload.paidMonths = [];
+      if (isRecurring) {
+        const currentDay = new Date().getDate();
+        if (payload.diaVencimento < currentDay) {
+          payload.paidMonths = [curKey];
+        } else {
+          payload.paidMonths = [];
+        }
+      }
       addBill(payload);
     }
     resetForm();
   }
 
   function handleMarkAsPaid(bill) {
-    if (confirm(`Deseja marcar '${bill.descricao}' como pago e lançar o gasto no seu relatório?`)) {
-      // 1. Lançar o gasto
+    const launchExpense = confirm(`Deseja lançar o pagamento de '${bill.descricao}' no seu relatório financeiro?\n\n(OK = Lançar e descontar do orçamento\nCancelar = Apenas riscar da agenda)`);
+    
+    if (launchExpense) {
       addExpense({
         descricao: bill.descricao,
         valor: bill.valor,
@@ -104,13 +112,12 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
         parcelas: 1,
         cartao: null
       });
+    }
 
-      // 2. Marcar como pago
-      if (bill.isRecurring) {
-        updateBill(bill.id, { paidMonths: [...(bill.paidMonths || []), curKey] });
-      } else {
-        updateBill(bill.id, { paid: true });
-      }
+    if (bill.isRecurring) {
+      updateBill(bill.id, { paidMonths: [...(bill.paidMonths || []), curKey] });
+    } else {
+      updateBill(bill.id, { paid: true });
     }
   }
 

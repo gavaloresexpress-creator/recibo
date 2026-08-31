@@ -65,9 +65,16 @@ export default function LoginScreen({ onSignIn, error }) {
           justifyContent: "center",
           margin: "0 auto 20px",
           boxShadow: "0 8px 24px rgba(230,180,74,0.35)",
-          fontSize: 32,
         }}>
-          💰
+          <span style={{ 
+            fontFamily: "'Fraunces', Georgia, serif", 
+            fontSize: 40, 
+            fontWeight: "bold", 
+            color: "#1A1000", 
+            transform: "translateY(2px)" 
+          }}>
+            R
+          </span>
         </div>
 
         {/* Título */}
