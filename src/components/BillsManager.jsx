@@ -215,7 +215,7 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
             </select>
           </div>
 
-          <div className="form-group" style={{ marginBottom: 16 }}>
+          <div className="form-group" style={{ marginBottom: 16, marginTop: 12 }}>
             <div 
               onClick={() => setIsRecurring(!isRecurring)}
               style={{ 
