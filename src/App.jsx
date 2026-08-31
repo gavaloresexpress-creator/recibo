@@ -12,6 +12,7 @@ import ExpenseForm    from "./components/ExpenseForm";
 import Dashboard      from "./components/Dashboard";
 import Report         from "./components/Report";
 import BudgetManager  from "./components/BudgetManager";
+import BillsManager   from "./components/BillsManager";
 import FinanceSplitter from "./components/FinanceSplitter";
 
 // ─────────────────────────────────────────────────────────────
@@ -131,7 +132,7 @@ export default function App() {
 
   const userId = user?.uid ?? null;
 
-  const { expenses, cards, categories, splitterEnvelopes, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, updateCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes }
+  const { expenses, cards, categories, splitterEnvelopes, bills, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, updateCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes, addBill, deleteBill, updateBill }
     = useExpenseStore(userId);
 
   const { budgets, setBudget }
@@ -214,7 +215,7 @@ export default function App() {
               />
             )}
             {tab === "dashboard" && (
-              <Dashboard expenses={expenses} categories={categories} cards={cards} budgets={budgets} />
+              <Dashboard expenses={expenses} categories={categories} cards={cards} budgets={budgets} bills={bills} />
             )}
             {tab === "report" && (
               <Report
@@ -232,6 +233,16 @@ export default function App() {
                 categories={categories}
                 budgets={budgets}
                 setBudget={setBudget}
+              />
+            )}
+            {tab === "bills" && (
+              <BillsManager
+                bills={bills}
+                addBill={addBill}
+                updateBill={updateBill}
+                deleteBill={deleteBill}
+                categories={categories}
+                addExpense={addExpense}
               />
             )}
             {tab === "splitter" && (

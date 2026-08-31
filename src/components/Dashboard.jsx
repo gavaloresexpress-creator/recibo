@@ -32,7 +32,7 @@ function firstOfCurrentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
-export default function Dashboard({ expenses, categories, cards = [], budgets = {} }) {
+export default function Dashboard({ expenses, categories, cards = [], budgets = {}, bills = [] }) {
   const curKey = currentMonthKey();
   const today = todayISO();
 
@@ -239,6 +239,21 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
   // Insights Inteligentes
   const insights = useMemo(() => {
     const list = [];
+    
+    // Contas a pagar insight
+    const curKey = currentMonthKey();
+    const unpaidCount = bills.filter(bill => {
+      if (bill.isRecurring) {
+        return !(bill.paidMonths || []).includes(curKey);
+      } else {
+        return !bill.paid && bill.dataVencimento && bill.dataVencimento.startsWith(curKey);
+      }
+    }).length;
+    
+    if (unpaidCount > 0) {
+      list.push({ icon: "🔔", text: `Você tem ${unpaidCount} conta(s) pendente(s) para pagar este mês. Verifique a aba de Contas.` });
+    }
+
     if (deltaPercent !== null) {
       if (deltaPercent > 0) list.push({ icon: "⚠️", text: `Atenção: Seus gastos subiram ${deltaPercent}% em relação ao período anterior.` });
       else if (deltaPercent < 0) list.push({ icon: "🎉", text: `Ótimo! Você economizou ${Math.abs(deltaPercent)}% em relação ao período anterior.` });
@@ -248,7 +263,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
     }
     if (list.length === 0) list.push({ icon: "💡", text: "Tudo sob controle por aqui. Continue registrando seus gastos!" });
     return list;
-  }, [deltaPercent, topCategory, totalMesDespesas]);
+  }, [deltaPercent, topCategory, totalMesDespesas, bills]);
 
   // Atalhos de período
   const presets = [

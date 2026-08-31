@@ -12,6 +12,7 @@ import { DEFAULT_CARDS, DEFAULT_CATEGORIES } from "../constants";
 //  Helpers de coleção por usuário
 // ─────────────────────────────────────────────────────────────
 const expensesCol = (uid) => collection(db, "users", uid, "expenses");
+const billsCol    = (uid) => collection(db, "users", uid, "bills");
 const cardsDoc    = (uid) => doc(db, "users", uid, "meta", "cards");
 const categoriesDoc = (uid) => doc(db, "users", uid, "meta", "categories");
 const splitterDoc   = (uid) => doc(db, "users", uid, "meta", "splitter");
@@ -24,6 +25,7 @@ const DEFAULT_SPLITTER = [
 
 export function useExpenseStore(userId) {
   const [expenses, setExpenses] = useState([]);
+  const [bills,    setBills]    = useState([]);
   const [cards,    setCards]    = useState(DEFAULT_CARDS);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [splitterEnvelopes, setSplitterEnvelopes] = useState(DEFAULT_SPLITTER);
@@ -31,6 +33,7 @@ export function useExpenseStore(userId) {
 
   // Guarda referências aos unsubscribers para limpeza
   const unsubExpenses = useRef(null);
+  const unsubBills    = useRef(null);
 
   // ── Observa a coleção de gastos em tempo real ──────────────
   useEffect(() => {
@@ -94,12 +97,22 @@ export function useExpenseStore(userId) {
       setExpenses(list);
       setLoading(false);
     }, (err) => {
-      console.error("Firestore snapshot error:", err);
+      console.error("Firestore snapshot error (expenses):", err);
       setLoading(false);
+    });
+
+    // Observa bills em tempo real
+    const qBills = query(billsCol(userId), orderBy("createdAt", "desc"));
+    unsubBills.current = onSnapshot(qBills, (snap) => {
+      const list = snap.docs.map((d) => ({ ...d.data(), _docId: d.id }));
+      setBills(list);
+    }, (err) => {
+      console.error("Firestore snapshot error (bills):", err);
     });
 
     return () => {
       if (unsubExpenses.current) unsubExpenses.current();
+      if (unsubBills.current) unsubBills.current();
     };
   }, [userId]);
 
@@ -225,5 +238,43 @@ export function useExpenseStore(userId) {
     }
   }, [userId]);
 
-  return { expenses, cards, categories, splitterEnvelopes, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, updateCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes };
+  // ── Adicionar Conta (Bill) ──────────────────────────────────
+  const addBill = useCallback(async (bill) => {
+    if (!userId) return;
+    try {
+      await addDoc(billsCol(userId), {
+        ...bill,
+        id: uid(),
+        createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error("addBill error:", err);
+    }
+  }, [userId]);
+
+  // ── Deletar Conta (Bill) ────────────────────────────────────
+  const deleteBill = useCallback(async (id) => {
+    if (!userId) return;
+    const bill = bills.find((b) => b.id === id);
+    if (!bill?._docId) return;
+    try {
+      await deleteDoc(doc(db, "users", userId, "bills", bill._docId));
+    } catch (err) {
+      console.error("deleteBill error:", err);
+    }
+  }, [userId, bills]);
+
+  // ── Atualizar Conta (Bill) ──────────────────────────────────
+  const updateBill = useCallback(async (id, newData) => {
+    if (!userId) return;
+    const bill = bills.find((b) => b.id === id);
+    if (!bill?._docId) return;
+    try {
+      await updateDoc(doc(db, "users", userId, "bills", bill._docId), newData);
+    } catch (err) {
+      console.error("updateBill error:", err);
+    }
+  }, [userId, bills]);
+
+  return { expenses, cards, categories, splitterEnvelopes, bills, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, updateCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes, addBill, deleteBill, updateBill };
 }

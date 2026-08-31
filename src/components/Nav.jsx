@@ -1,8 +1,9 @@
-import { Plus, LayoutDashboard, Receipt, Wallet, BarChart3 } from "lucide-react";
+import { Plus, LayoutDashboard, Receipt, Wallet, BarChart3, Calendar } from "lucide-react";
 
 const TABS = [
   { key: "form",      label: "Novo",       Icon: Plus },
   { key: "dashboard", label: "Painel",     Icon: LayoutDashboard },
+  { key: "bills",     label: "Contas",     Icon: Calendar },
   { key: "report",    label: "Relatório",  Icon: Receipt },
   { key: "budget",    label: "Orçamento",  Icon: BarChart3 },
   { key: "splitter",  label: "Organizar",  Icon: Wallet },
