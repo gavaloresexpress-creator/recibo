@@ -10,6 +10,7 @@ import {
   formatBRL, currentMonthKey, monthLabel, shiftMonthKey, getInstallmentEntries, todayISO, formatDateBR, getPurchaseEntries
 } from "../utils/format";
 import { PAYMENT_METHODS } from "../constants";
+import HelpIcon from "./HelpIcon";
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -363,6 +364,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
       >
         <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, color: "var(--blue)", marginBottom: 8 }}>
           <Lightbulb size={14} /> Insights do Período
+          <HelpIcon text="Um resumo rápido de alertas e dicas com base nas suas movimentações do mês atual." />
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {insights.map((insight, idx) => (
@@ -533,6 +535,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
           <p className="section-title">
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <Target size={13} /> Orçamento do Mês — {monthLabel(curKey)}
+              <HelpIcon text="Mostra o quanto você já gastou em relação ao limite que você definiu para cada categoria." />
             </span>
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -571,7 +574,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
       {/* Pie Chart — Categorias (mês atual) */}
       {byCategory.length > 0 && (
         <div className="card">
-          <p className="section-title">Saídas por categoria — {monthLabel(curKey)}</p>
+          <p className="section-title">Saídas por categoria — {monthLabel(curKey)} <HelpIcon text="Gráfico que ilustra a proporção dos seus gastos em cada categoria, ajudando a identificar onde seu dinheiro está indo." /></p>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
@@ -610,7 +613,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
       {/* Pie Chart — Entradas (mês atual) */}
       {incomeByCategory.length > 0 && (
         <div className="card" style={{ border: "1px solid rgba(61, 214, 140, 0.2)" }}>
-          <p className="section-title" style={{ color: "var(--sage)" }}>Entradas por categoria — {monthLabel(curKey)}</p>
+          <p className="section-title" style={{ color: "var(--sage)" }}>Entradas por categoria — {monthLabel(curKey)} <HelpIcon text="Gráfico que ilustra de onde vem o seu dinheiro recebido no mês." /></p>
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
@@ -649,7 +652,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
       {/* Bar Chart — evolução + projeção futura */}
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <p className="section-title" style={{ marginBottom: 0 }}>Evolução mensal</p>
+          <p className="section-title" style={{ marginBottom: 0 }}>Evolução mensal <HelpIcon text="Gráfico que compara suas receitas, despesas já realizadas e projeções futuras (faturas e contas fixas), oferecendo uma visão do seu caixa a longo prazo." /></p>
           <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--text-dim)" }}>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: "var(--sage)", display: "inline-block" }} />
@@ -804,7 +807,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
       {/* Por Forma de Pagamento */}
       {byPaymentMethod.length > 0 && (
         <div className="card">
-          <p className="section-title">Por forma de pagamento — {monthLabel(curKey)}</p>
+          <p className="section-title">Por forma de pagamento — {monthLabel(curKey)} <HelpIcon text="Detalhamento de como você está pagando suas despesas (Pix, débito, crédito, etc)." /></p>
           {byPaymentMethod.map((m) => (
             <div className="legend-row" key={m.key}>
               <span style={{ fontSize: 18, width: 24, textAlign: "center" }}>{m.icon}</span>
@@ -828,6 +831,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
           <p className="section-title">
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <CreditCard size={13} /> Por cartão de crédito — {monthLabel(curKey)}
+              <HelpIcon text="Mostra em quais cartões de crédito você está concentrando mais gastos neste mês." />
             </span>
           </p>
           <ResponsiveContainer width="100%" height={Math.max(120, byCard.length * 50)}>
@@ -861,7 +865,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
 
       {/* Lançamentos recentes */}
       <div className="card">
-        <p className="section-title">Lançamentos recentes</p>
+        <p className="section-title">Lançamentos recentes <HelpIcon text="Lista cronológica das suas últimas compras e receitas." /></p>
         {recent.map((e) => {
           const cat = catByKey[e.categoria];
           return (

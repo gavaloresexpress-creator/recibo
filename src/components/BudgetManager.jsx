@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import HelpIcon from "./HelpIcon";
 
 import { formatBRL, currentMonthKey, getPurchaseEntries } from "../utils/format";
 import { maskCurrency, currencyToNumber } from "../utils/format";
@@ -99,7 +100,10 @@ export default function BudgetManager({ budgets, setBudget, expenses, categories
     <div className="tab-enter" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {totalBudget > 0 && (
         <div className="card" style={{ textAlign: "center", padding: "24px 16px" }}>
-          <p className="section-title" style={{ marginBottom: 4 }}>Orçamento total do mês</p>
+          <p className="section-title" style={{ marginBottom: 4, display: "flex", alignItems: "center" }}>
+            Orçamento total do mês
+            <HelpIcon text="Define o limite máximo global que você deseja gastar no mês. Ajuda a manter suas finanças sob controle." />
+          </p>
           <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 34, fontWeight: 700, color: "var(--gold)" }}>
             {formatBRL(totalBudget)}
           </p>
@@ -110,7 +114,10 @@ export default function BudgetManager({ budgets, setBudget, expenses, categories
       )}
 
       <div className="card">
-        <p className="section-title">Limite por categoria</p>
+        <p className="section-title" style={{ display: "flex", alignItems: "center" }}>
+          Limite por categoria
+          <HelpIcon text="Permite definir um teto de gastos para cada categoria específica." />
+        </p>
         <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16, lineHeight: 1.5 }}>
           Defina um limite mensal para cada categoria. A barra de progresso indica quanto você já gastou.
         </p>

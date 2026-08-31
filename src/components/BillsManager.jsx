@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { formatBRL, currentMonthKey, todayISO, maskCurrency, currencyToNumber, monthLabel, shiftMonthKey } from "../utils/format";
 import { Check, Clock, AlertCircle, Plus, X, ChevronLeft, ChevronRight, Edit3 } from "lucide-react";
+import HelpIcon from "./HelpIcon";
 
 export default function BillsManager({ bills, addBill, updateBill, deleteBill, categories, addExpense }) {
   const [showForm, setShowForm] = useState(false);
@@ -97,21 +98,21 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
   }
 
   function handleMarkAsPaid(bill) {
-    const launchExpense = confirm(`Deseja lançar o pagamento de '${bill.descricao}' no seu relatório financeiro?\n\n(OK = Lançar e descontar do orçamento\nCancelar = Apenas riscar da agenda)`);
+    const shouldPay = confirm(`Deseja marcar '${bill.descricao}' como paga e lançar o gasto no seu relatório financeiro?`);
     
-    if (launchExpense) {
-      addExpense({
-        descricao: bill.descricao,
-        valor: bill.valor,
-        data: bill.dueDateStr,
-        categoria: bill.categoria,
-        tipo: "despesa",
-        isRecurring: false,
-        formaPagamento: "dinheiro",
-        parcelas: 1,
-        cartao: null
-      });
-    }
+    if (!shouldPay) return;
+
+    addExpense({
+      descricao: bill.descricao,
+      valor: bill.valor,
+      data: bill.dueDateStr,
+      categoria: bill.categoria,
+      tipo: "despesa",
+      isRecurring: false,
+      formaPagamento: "dinheiro",
+      parcelas: 1,
+      cartao: null
+    });
 
     if (bill.isRecurring) {
       updateBill(bill.id, { paidMonths: [...(bill.paidMonths || []), curKey] });
@@ -173,7 +174,10 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 600, whiteSpace: "nowrap" }}>Contas a Pagar</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, whiteSpace: "nowrap", display: "flex", alignItems: "center" }}>
+            Contas a Pagar
+            <HelpIcon text="Aqui você cadastra contas pontuais ou recorrentes (fixas). O sistema projetará as contas mensais fixas automaticamente para os próximos meses." />
+          </h2>
           {!showForm && currentMonthBills.length > 0 && (
             <div style={{ fontSize: 13, color: "var(--text-dim)", marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
               <span>Total: <strong style={{ color: "var(--text)" }}>{formatBRL(totalBillsMonth)}</strong></span>
@@ -276,6 +280,7 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
         <div className="card">
           <p className="section-title" style={{ color: "var(--rust)", display: "flex", alignItems: "center", gap: 6 }}>
             <AlertCircle size={16} /> Atrasadas
+            <HelpIcon text="Contas com o prazo de vencimento ultrapassado que ainda não foram marcadas como pagas." />
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {overdueBills.map(b => (
@@ -289,6 +294,7 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
         <div className="card">
           <p className="section-title" style={{ color: "var(--gold)", display: "flex", alignItems: "center", gap: 6 }}>
             <Clock size={16} /> Próximas a vencer
+            <HelpIcon text="Contas que vão vencer em breve." />
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {upcomingBills.map(b => (
@@ -302,6 +308,7 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
         <div className="card">
           <p className="section-title" style={{ color: "var(--sage)", display: "flex", alignItems: "center", gap: 6 }}>
             <Check size={16} /> Pagas neste mês
+            <HelpIcon text="Contas que você já pagou este mês." />
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {paidBills.map(b => (
@@ -319,8 +326,8 @@ function BillRow({ bill, onPay, isPaid, onDelete, onEdit }) {
   const displayDate = `${parts[2]}/${parts[1]}`;
   
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid var(--border)" }}>
-      <div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, padding: "12px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid var(--border)" }}>
+      <div style={{ minWidth: 120, flex: "1 1 auto" }}>
         <div style={{ fontWeight: 500, fontSize: 15, color: isPaid ? "var(--text-muted)" : "var(--text)", textDecoration: isPaid ? "line-through" : "none" }}>
           {bill.descricao}
         </div>
@@ -328,7 +335,7 @@ function BillRow({ bill, onPay, isPaid, onDelete, onEdit }) {
           Vence em: {displayDate} {bill.isRecurring ? "(Mensal)" : ""}
         </div>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         <span style={{ fontWeight: 600, color: isPaid ? "var(--text-muted)" : "var(--text)", marginRight: 4 }}>
           {formatBRL(bill.valor)}
         </span>

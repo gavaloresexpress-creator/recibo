@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { Trash2, Search, Download, Pencil } from "lucide-react";
 import { PAYMENT_METHODS } from "../constants";
+import HelpIcon from "./HelpIcon";
 
 import {
   formatBRL, formatDateBR, monthKeyOf, monthLabel,
@@ -177,7 +178,10 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
     <div className="tab-enter" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Filtros */}
       <div className="card">
-        <p className="section-title">Filtros</p>
+        <p className="section-title" style={{ display: "flex", alignItems: "center" }}>
+          Filtros
+          <HelpIcon text="Utilize para buscar lançamentos em períodos personalizados (além do mês atual)." />
+        </p>
         <div className="filters">
           {/* Busca */}
           <div className="search-wrap">
@@ -414,7 +418,10 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       {/* Resumo por categoria */}
       {byCategory.length > 0 && (
         <div className="card">
-          <p className="section-title">Resumo por categoria</p>
+          <p className="section-title" style={{ display: "flex", alignItems: "center" }}>
+            Resumo por categoria
+            <HelpIcon text="Tabela detalhada que soma todos os seus gastos no período selecionado." />
+          </p>
           
           {byCategory.filter(c => c.tipo !== "receita").length > 0 && (
             <div style={{ marginBottom: byCategory.filter(c => c.tipo === "receita").length > 0 ? 16 : 0 }}>

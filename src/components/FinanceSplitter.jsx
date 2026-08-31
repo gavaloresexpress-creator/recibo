@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Calculator, Wallet, PieChart } from "lucide-react";
 import { formatBRL, currencyToNumber, maskCurrency } from "../utils/format";
+import HelpIcon from "./HelpIcon";
 import { motion, AnimatePresence } from "framer-motion";
 
 const DEFAULT_ENVELOPES = [
@@ -57,7 +58,10 @@ export default function FinanceSplitter({ envelopes = [], onUpdateEnvelopes }) {
 
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <p className="section-title" style={{ marginBottom: 0 }}>Distribuição (%)</p>
+          <p className="section-title" style={{ marginBottom: 0, display: "flex", alignItems: "center" }}>
+            Distribuição (%)
+            <HelpIcon text="Método financeiro onde você divide sua renda em: 50% para necessidades (contas, aluguel), 30% para desejos (lazer, compras) e 20% para poupança." />
+          </p>
           <span style={{ fontSize: 12, fontWeight: 600, color: totalPercent === 100 ? "var(--sage)" : (totalPercent > 100 ? "var(--rust)" : "var(--gold)") }}>
             {totalPercent}% alocado
           </span>
