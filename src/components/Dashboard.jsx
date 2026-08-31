@@ -36,10 +36,10 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
   const curKey = currentMonthKey();
   const today = todayISO();
 
-  // --- Estado do seletor de período ---
   const [rangeStart, setRangeStart] = useState(firstOfCurrentMonth());
   const [rangeEnd,   setRangeEnd]   = useState(today);
   const [selectedChartMonth, setSelectedChartMonth] = useState(null);
+  const [expandedItemId, setExpandedItemId] = useState(null);
 
   const catByKey = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.key, c])),
@@ -209,18 +209,43 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
       const receitas = allEntries
         .filter((e) => e.key === key && e.tipo === "receita")
         .reduce((s, e) => s + e.value, 0);
+      
+      let projecaoCartao = 0;
+      let projecaoContas = 0;
+      
+      if (isFuture) {
+        projecaoCartao = allEntries
+          .filter((e) => e.key === key && e.tipo !== "receita" && !!e.cartao)
+          .reduce((s, e) => s + e.value, 0);
+          
+        const projecaoOutros = allEntries
+          .filter((e) => e.key === key && e.tipo !== "receita" && !e.cartao)
+          .reduce((s, e) => s + e.value, 0);
+          
+        const projecaoBills = bills.filter(bill => {
+          if (bill.isRecurring) {
+            if (bill.startMonth && key < bill.startMonth) return false;
+            return !(bill.paidMonths || []).includes(key);
+          }
+          return !bill.paid && bill.dataVencimento && bill.dataVencimento.startsWith(key);
+        }).reduce((s, b) => s + b.valor, 0);
+        
+        projecaoContas = projecaoOutros + projecaoBills;
+      }
+      
       return {
         key,
         label: monthLabel(key),
         realizado: isFuture ? 0 : despesas,
-        projecao: isFuture ? despesas : 0,
+        projecaoCartao,
+        projecaoContas,
         receitas,
         isFuture,
         isCurrent,
         total: despesas, // para tooltip
       };
     });
-  }, [allEntries, curKey]);
+  }, [allEntries, curKey, bills]);
 
   const onlyExpenses = useMemo(() => expenses.filter(e => e.tipo !== "receita"), [expenses]);
 
@@ -636,7 +661,11 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: "#5B8DEF", display: "inline-block", opacity: 0.6 }} />
-              Projeção
+              Fatura Cartão
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: "#9B59B6", display: "inline-block", opacity: 0.6 }} />
+              Contas/Fixos
             </span>
           </div>
         </div>
@@ -668,7 +697,8 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
               content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 const realizado = payload.find(p => p.dataKey === "realizado")?.value || 0;
-                const projecao  = payload.find(p => p.dataKey === "projecao")?.value || 0;
+                const projCartao = payload.find(p => p.dataKey === "projecaoCartao")?.value || 0;
+                const projContas = payload.find(p => p.dataKey === "projecaoContas")?.value || 0;
                 const receitas  = payload.find(p => p.dataKey === "receitas")?.value || 0;
                 return (
                   <div className="chart-tooltip">
@@ -679,9 +709,14 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
                     {realizado > 0 && (
                       <div className="chart-tooltip__value">-{formatBRL(realizado)}</div>
                     )}
-                    {projecao > 0 && (
+                    {projCartao > 0 && (
                       <div style={{ fontSize: 12, color: "#5B8DEF", marginTop: 2 }}>
-                        Projeção (saídas): {formatBRL(projecao)}
+                        Fatura Cartão: {formatBRL(projCartao)}
+                      </div>
+                    )}
+                    {projContas > 0 && (
+                      <div style={{ fontSize: 12, color: "#9B59B6", marginTop: 2 }}>
+                        Contas/Fixos: {formatBRL(projContas)}
                       </div>
                     )}
                   </div>
@@ -692,7 +727,8 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
             <ReferenceLine x={monthLabel(curKey)} stroke="#E6B44A" strokeDasharray="4 3" strokeWidth={1.5} />
             <Bar dataKey="receitas" fill="var(--sage)" radius={[5, 5, 0, 0]} opacity={0.85} onClick={(data) => setSelectedChartMonth(data.payload?.key || data.activePayload?.[0]?.payload?.key)} style={{ cursor: "pointer" }} />
             <Bar dataKey="realizado" fill="#E6B44A" radius={[5, 5, 0, 0]} opacity={0.85} onClick={(data) => setSelectedChartMonth(data.payload?.key || data.activePayload?.[0]?.payload?.key)} style={{ cursor: "pointer" }} />
-            <Bar dataKey="projecao"  fill="#5B8DEF" radius={[5, 5, 0, 0]} opacity={0.55} onClick={(data) => setSelectedChartMonth(data.payload?.key || data.activePayload?.[0]?.payload?.key)} style={{ cursor: "pointer" }} />
+            <Bar dataKey="projecaoCartao" stackId="proj" fill="#5B8DEF" radius={[0, 0, 0, 0]} opacity={0.55} onClick={(data) => setSelectedChartMonth(data.payload?.key || data.activePayload?.[0]?.payload?.key)} style={{ cursor: "pointer" }} />
+            <Bar dataKey="projecaoContas" stackId="proj" fill="#9B59B6" radius={[5, 5, 0, 0]} opacity={0.55} onClick={(data) => setSelectedChartMonth(data.payload?.key || data.activePayload?.[0]?.payload?.key)} style={{ cursor: "pointer" }} />
             <Line
               type="monotone"
               dataKey="realizado"
@@ -726,20 +762,33 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
                 const exp = expenses.find(ex => ex.id === e.id);
                 if (!exp) return null;
                 const cat = categories.find(c => c.key === e.categoria);
+                const isExpanded = expandedItemId === idx;
                 return (
-                  <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 8 }}>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <span style={{ fontSize: 16 }}>{cat?.icon}</span>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{exp.descricao}</div>
-                        <div style={{ color: "var(--text-dim)", fontSize: 10 }}>
-                          Compra em {formatDateBR(exp.data)} • Parcela {e.installmentIndex}/{e.totalInstallments}
+                  <div key={idx} onClick={() => setExpandedItemId(isExpanded ? null : idx)} style={{ display: "flex", flexDirection: "column", fontSize: 12, borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 8, cursor: "pointer" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{ fontSize: 16 }}>{cat?.icon}</span>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{exp.descricao}</div>
+                          <div style={{ color: "var(--text-dim)", fontSize: 10 }}>
+                            Compra em {formatDateBR(exp.data)} • Parcela {e.installmentIndex}/{e.totalInstallments}
+                          </div>
                         </div>
                       </div>
+                      <div style={{ fontWeight: 600, color: "var(--rust)" }}>
+                        -{formatBRL(e.value)}
+                      </div>
                     </div>
-                    <div style={{ fontWeight: 600, color: "var(--rust)" }}>
-                      -{formatBRL(e.value)}
-                    </div>
+                    {isExpanded && exp.notas && (
+                      <div style={{ marginTop: 8, padding: 8, background: "rgba(255,255,255,0.05)", borderRadius: 6, color: "var(--text-dim)", fontStyle: "italic" }}>
+                        {exp.notas}
+                      </div>
+                    )}
+                    {isExpanded && !exp.notas && (
+                      <div style={{ marginTop: 4, color: "var(--text-dim)", fontSize: 11, fontStyle: "italic" }}>
+                        Sem notas adicionais.
+                      </div>
+                    )}
                   </div>
                 );
               })}
