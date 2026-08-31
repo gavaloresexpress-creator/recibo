@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import { formatBRL, currentMonthKey, todayISO, maskCurrency, currencyToNumber } from "../utils/format";
-import { Check, Clock, AlertCircle, Plus, X } from "lucide-react";
+import { formatBRL, currentMonthKey, todayISO, maskCurrency, currencyToNumber, monthLabel, shiftMonthKey } from "../utils/format";
+import { Check, Clock, AlertCircle, Plus, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function BillsManager({ bills, addBill, updateBill, deleteBill, categories, addExpense }) {
   const [showForm, setShowForm] = useState(false);
@@ -14,7 +14,7 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
   const [diaVencimento, setDiaVencimento] = useState(10);
   const [dataVencimento, setDataVencimento] = useState(todayISO());
 
-  const curKey = currentMonthKey(); // YYYY-MM
+  const [curKey, setCurKey] = useState(currentMonthKey()); // YYYY-MM
   const todayDate = new Date();
   
   // Computed bills for the current month
@@ -43,7 +43,10 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
       
       return { ...bill, isPaid, dueDateStr, status };
     }).filter(bill => {
-      if (bill.isRecurring) return true;
+      if (bill.isRecurring) {
+        if (bill.startMonth && curKey < bill.startMonth) return false;
+        return true;
+      }
       if (bill.status === "overdue" && !bill.isPaid) return true;
       return bill.dueDateStr.startsWith(curKey);
     }).sort((a, b) => a.dueDateStr.localeCompare(b.dueDateStr));
@@ -85,12 +88,8 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
       updateBill(editingId, payload);
     } else {
       if (isRecurring) {
-        const currentDay = new Date().getDate();
-        if (payload.diaVencimento < currentDay) {
-          payload.paidMonths = [curKey];
-        } else {
-          payload.paidMonths = [];
-        }
+        payload.startMonth = curKey;
+        payload.paidMonths = [];
       }
       addBill(payload);
     }
@@ -130,6 +129,19 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
   return (
     <div className="tab-enter" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       
+      {/* Month Navigator */}
+      {!showForm && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <button className="icon-btn" onClick={() => setCurKey(shiftMonthKey(curKey, -1))}>
+            <ChevronLeft size={20} />
+          </button>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>{monthLabel(curKey)}</div>
+          <button className="icon-btn" onClick={() => setCurKey(shiftMonthKey(curKey, 1))}>
+            <ChevronRight size={20} />
+          </button>
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h2 style={{ fontSize: 18, fontWeight: 600 }}>Contas a Pagar</h2>
         {!showForm && (
