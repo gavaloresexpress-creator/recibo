@@ -44,6 +44,12 @@
 
   /* Transitions */
   --t: 0.2s ease;
+
+  /* Overlays */
+  --overlay-white: rgba(255,255,255,0.05);
+  --overlay-dark: rgba(13,17,23,0.8);
+  --backdrop: rgba(10, 15, 30, 0.6);
+  --shadow-modal: 0 10px 40px rgba(0,0,0,0.5);
 }
 
 :root.theme-light {
@@ -54,12 +60,12 @@
   --border:    #E9ECEF;
   --border-lg: #DEE2E6;
 
-  --gold:      #C9922B;
-  --gold-dim:  rgba(201,146,43,0.15);
-  --gold-glow: rgba(201,146,43,0.08);
-  --rust:      #D92D20;
-  --sage:      #039855;
-  --blue:      #2D68EB;
+  --gold:      #A9751A;
+  --gold-dim:  rgba(169,117,26,0.15);
+  --gold-glow: rgba(169,117,26,0.08);
+  --rust:      #B82115;
+  --sage:      #027240;
+  --blue:      #1C52C2;
 
   --text:       #111827;
   --text-muted: #4B5563;
@@ -67,6 +73,11 @@
 
   --shadow-card: 0 4px 12px rgba(0,0,0,0.08);
   --shadow-sm:   0 2px 6px  rgba(0,0,0,0.05);
+
+  --overlay-white: rgba(0,0,0,0.04);
+  --overlay-dark: rgba(255,255,255,0.9);
+  --backdrop: rgba(255, 255, 255, 0.6);
+  --shadow-modal: 0 10px 40px rgba(0,0,0,0.1);
 }
 
 html, body, #root {
@@ -774,3 +785,20 @@ input[type="color"]::-moz-color-swatch {
     border-right: 1px solid var(--border);
   }
 }
+
+ / *   H i d e   V a l u e s   m o d e   * / 
+ h t m l . h i d e - v a l u e s   . s t a t - c a r d _ _ v a l u e , 
+ h t m l . h i d e - v a l u e s   . c h a r t - t o o l t i p _ _ v a l u e , 
+ h t m l . h i d e - v a l u e s   . l e g e n d - r o w _ _ v a l u e , 
+ h t m l . h i d e - v a l u e s   . l i s t - r o w _ _ v a l u e , 
+ h t m l . h i d e - v a l u e s   p [ s t y l e * = \  
+ m o n o s p a c e \ ] , 
+ h t m l . h i d e - v a l u e s   s t r o n g , 
+ h t m l . h i d e - v a l u e s   . h e a d e r _ _ b a d g e , 
+ h t m l . h i d e - v a l u e s   s p a n   >   s t r o n g   { 
+     f i l t e r :   b l u r ( 5 p x ) ; 
+     o p a c i t y :   0 . 6 ; 
+     u s e r - s e l e c t :   n o n e ; 
+     p o i n t e r - e v e n t s :   n o n e ; 
+ }  
+ 

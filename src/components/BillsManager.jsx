@@ -326,7 +326,7 @@ function BillRow({ bill, onPay, isPaid, onDelete, onEdit }) {
   const displayDate = `${parts[2]}/${parts[1]}`;
   
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, padding: "12px", background: "rgba(255,255,255,0.03)", borderRadius: 8, border: "1px solid var(--border)" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, padding: "12px", background: "var(--overlay-white)", borderRadius: 8, border: "1px solid var(--border)" }}>
       <div style={{ minWidth: 120, flex: "1 1 auto" }}>
         <div style={{ fontWeight: 500, fontSize: 15, color: isPaid ? "var(--text-muted)" : "var(--text)", textDecoration: isPaid ? "line-through" : "none" }}>
           {bill.descricao}

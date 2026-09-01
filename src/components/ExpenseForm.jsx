@@ -448,7 +448,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
                 const vencimento = isObj ? c.vencimento : 1;
                 
                 return (
-                  <div key={id} style={{ display: "flex", gap: 8, alignItems: "center", background: "rgba(255,255,255,0.05)", padding: 8, borderRadius: 6 }}>
+                  <div key={id} style={{ display: "flex", gap: 8, alignItems: "center", background: "var(--overlay-white)", padding: 8, borderRadius: 6 }}>
                     <input 
                       className="input" 
                       style={{ flex: 1, padding: "4px 8px", fontSize: 13 }} 

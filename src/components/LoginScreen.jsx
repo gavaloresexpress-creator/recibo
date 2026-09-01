@@ -146,7 +146,7 @@ export default function LoginScreen({ onSignIn, error }) {
             alignItems: "center",
             justifyContent: "center",
             gap: 12,
-            background: loading ? "rgba(255,255,255,0.05)" : "#fff",
+            background: loading ? "var(--overlay-white)" : "#fff",
             color: "#1A1A2E",
             border: "none",
             borderRadius: 10,

@@ -124,7 +124,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
         <button 
           type="button"
           className="select" 
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', background: 'rgba(13,17,23,0.8)' }}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', background: 'var(--overlay-dark)' }}
           onClick={() => setOpen(!open)}
         >
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
@@ -226,7 +226,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
           
           {/* Período Específico */}
           <div className="filters__row" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 6, background: "rgba(13,17,23,0.8)", border: "1.5px solid var(--border)", borderRadius: "var(--r-sm)", padding: "4px 8px" }}>
+            <div style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 6, background: "var(--overlay-dark)", border: "1.5px solid var(--border)", borderRadius: "var(--r-sm)", padding: "4px 8px" }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>DE:</span>
               <input 
                 type="date" 
@@ -235,7 +235,7 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
                 onChange={e => setStartDate(e.target.value)} 
               />
             </div>
-            <div style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 6, background: "rgba(13,17,23,0.8)", border: "1.5px solid var(--border)", borderRadius: "var(--r-sm)", padding: "4px 8px" }}>
+            <div style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 6, background: "var(--overlay-dark)", border: "1.5px solid var(--border)", borderRadius: "var(--r-sm)", padding: "4px 8px" }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>ATÉ:</span>
               <input 
                 type="date" 

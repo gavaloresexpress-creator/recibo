@@ -131,7 +131,7 @@ export default function FinanceSplitter({ envelopes = [], onUpdateEnvelopes }) {
                   
                   {/* Progress bar and amount */}
                   <div style={{ display: "flex", alignItems: "center", gap: 12, paddingLeft: 52 }}>
-                    <div style={{ flex: 1, height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ flex: 1, height: 6, background: "var(--overlay-white)", borderRadius: 3, overflow: "hidden" }}>
                       <div style={{ height: "100%", width: `${Math.min(100, env.percent)}%`, background: env.color, borderRadius: 3, transition: "width 0.3s ease" }} />
                     </div>
                     <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600, fontSize: 13, color: "var(--text)", minWidth: 80, textAlign: "right" }}>

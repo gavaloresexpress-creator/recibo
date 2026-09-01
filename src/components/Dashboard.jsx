@@ -466,12 +466,12 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
           <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4, marginBottom: 8 }}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {rangeAvista > 0 && (
-                <span style={{ fontSize: 11, color: "var(--text-dim)", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>
+                <span style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--overlay-white)", padding: "2px 6px", borderRadius: 4 }}>
                   À vista: {formatBRL(rangeAvista)}
                 </span>
               )}
               {rangeParcelado > 0 && (
-                <span style={{ fontSize: 11, color: "var(--text-dim)", background: "rgba(255,255,255,0.05)", padding: "2px 6px", borderRadius: 4 }}>
+                <span style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--overlay-white)", padding: "2px 6px", borderRadius: 4 }}>
                   Parcelas (cota do mês): {formatBRL(rangeParcelado)}
                 </span>
               )}
@@ -556,7 +556,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
                       <strong style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{formatBRL(spent)}</strong> / {formatBRL(limit)}
                     </span>
                   </div>
-                  <div style={{ background: "rgba(255,255,255,0.05)", height: 6, borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ background: "var(--overlay-white)", height: 6, borderRadius: 3, overflow: "hidden" }}>
                     <motion.div 
                       style={{ background: barColor, height: "100%", borderRadius: 3 }}
                       initial={{ width: 0 }}
@@ -651,9 +651,12 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
 
       {/* Bar Chart — evolução + projeção futura */}
       <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <p className="section-title" style={{ marginBottom: 0 }}>Evolução mensal <HelpIcon text="Gráfico que compara suas receitas, despesas já realizadas e projeções futuras (faturas e contas fixas), oferecendo uma visão do seu caixa a longo prazo." /></p>
-          <div style={{ display: "flex", gap: 12, fontSize: 11, color: "var(--text-dim)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
+          <p className="section-title" style={{ display: "flex", alignItems: "center", marginBottom: 0 }}>
+            Evolução mensal 
+            <HelpIcon text="Gráfico que compara suas receitas, despesas já realizadas e projeções futuras (faturas e contas fixas), oferecendo uma visão do seu caixa a longo prazo." />
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12, fontSize: 11, color: "var(--text-dim)" }}>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 8, height: 8, borderRadius: 2, background: "var(--sage)", display: "inline-block" }} />
               Entradas
@@ -767,7 +770,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
                 const cat = categories.find(c => c.key === e.categoria);
                 const isExpanded = expandedItemId === idx;
                 return (
-                  <div key={idx} onClick={() => setExpandedItemId(isExpanded ? null : idx)} style={{ display: "flex", flexDirection: "column", fontSize: 12, borderBottom: "1px solid rgba(255,255,255,0.05)", paddingBottom: 8, cursor: "pointer" }}>
+                  <div key={idx} onClick={() => setExpandedItemId(isExpanded ? null : idx)} style={{ display: "flex", flexDirection: "column", fontSize: 12, borderBottom: "1px solid var(--overlay-white)", paddingBottom: 8, cursor: "pointer" }}>
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                         <span style={{ fontSize: 16 }}>{cat?.icon}</span>
@@ -783,7 +786,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
                       </div>
                     </div>
                     {isExpanded && exp.notas && (
-                      <div style={{ marginTop: 8, padding: 8, background: "rgba(255,255,255,0.05)", borderRadius: 6, color: "var(--text-dim)", fontStyle: "italic" }}>
+                      <div style={{ marginTop: 8, padding: 8, background: "var(--overlay-white)", borderRadius: 6, color: "var(--text-dim)", fontStyle: "italic" }}>
                         {exp.notas}
                       </div>
                     )}

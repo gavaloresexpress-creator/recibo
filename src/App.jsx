@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { LogOut, Sun, Moon } from "lucide-react";
+import { LogOut, Sun, Moon, Eye, EyeOff } from "lucide-react";
 import { useAuth }          from "./hooks/useAuth";
 import { useExpenseStore }  from "./hooks/useExpenseStore";
 import { useBudgetStore }   from "./hooks/useBudgetStore";
@@ -24,6 +24,10 @@ function Header({ expenses, user, onSignOut }) {
   const [isLightMode, setIsLightMode] = useState(() => {
     return localStorage.getItem("theme") === "light";
   });
+  
+  const [hideValues, setHideValues] = useState(() => {
+    return localStorage.getItem("hideValues") === "true";
+  });
 
   useEffect(() => {
     if (isLightMode) {
@@ -34,6 +38,16 @@ function Header({ expenses, user, onSignOut }) {
       localStorage.setItem("theme", "dark");
     }
   }, [isLightMode]);
+
+  useEffect(() => {
+    if (hideValues) {
+      document.documentElement.classList.add("hide-values");
+      localStorage.setItem("hideValues", "true");
+    } else {
+      document.documentElement.classList.remove("hide-values");
+      localStorage.setItem("hideValues", "false");
+    }
+  }, [hideValues]);
 
   return (
     <header className="header">
@@ -52,6 +66,16 @@ function Header({ expenses, user, onSignOut }) {
           style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-elev)", border: "1px solid var(--border)", color: "var(--text-muted)" }}
         >
           {isLightMode ? <Moon size={16} /> : <Sun size={16} />}
+        </button>
+
+        {/* Hide Values Toggle */}
+        <button
+          className="icon-btn"
+          onClick={() => setHideValues(!hideValues)}
+          title={hideValues ? "Mostrar valores" : "Ocultar valores"}
+          style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-elev)", border: "1px solid var(--border)", color: "var(--text-muted)" }}
+        >
+          {hideValues ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
 
         {/* Avatar + logout */}
