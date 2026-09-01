@@ -791,10 +791,11 @@ html.hide-values .stat-card__value,
 html.hide-values .chart-tooltip__value,
 html.hide-values .legend-row__value,
 html.hide-values .list-row__value,
-html.hide-values p[style*="monospace"],
+html.hide-values [style*="monospace"],
 html.hide-values strong,
 html.hide-values .header__badge,
-html.hide-values span > strong {
+html.hide-values span > strong,
+html.hide-values .money-blur {
   filter: blur(5px);
   opacity: 0.6;
   user-select: none;

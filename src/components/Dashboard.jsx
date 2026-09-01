@@ -466,12 +466,12 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
           <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4, marginBottom: 8 }}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {rangeAvista > 0 && (
-                <span style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--overlay-white)", padding: "2px 6px", borderRadius: 4 }}>
+                <span className="money-blur" style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--overlay-white)", padding: "2px 6px", borderRadius: 4 }}>
                   À vista: {formatBRL(rangeAvista)}
                 </span>
               )}
               {rangeParcelado > 0 && (
-                <span style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--overlay-white)", padding: "2px 6px", borderRadius: 4 }}>
+                <span className="money-blur" style={{ fontSize: 11, color: "var(--text-dim)", background: "var(--overlay-white)", padding: "2px 6px", borderRadius: 4 }}>
                   Parcelas (cota do mês): {formatBRL(rangeParcelado)}
                 </span>
               )}
@@ -552,7 +552,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
                 <div key={cat.key}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
                     <span style={{ color: "var(--text-muted)" }}>{cat.icon} {cat.label}</span>
-                    <span style={{ color: isOver ? "var(--rust)" : "var(--text)" }}>
+                    <span className="money-blur" style={{ color: isOver ? "var(--rust)" : "var(--text)" }}>
                       <strong style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{formatBRL(spent)}</strong> / {formatBRL(limit)}
                     </span>
                   </div>

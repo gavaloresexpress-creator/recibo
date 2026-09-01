@@ -28,7 +28,7 @@ function BudgetRow({ cat, budget, spent, onSave }) {
       <div className="budget-row__info">
         <div className="budget-row__label">{cat.label}</div>
         <div className="budget-row__values">
-          <span style={{ color: over ? "var(--rust)" : warn ? "var(--gold)" : "var(--sage)", fontWeight: 600 }}>
+          <span className="money-blur" style={{ color: over ? "var(--rust)" : warn ? "var(--gold)" : "var(--sage)", fontWeight: 600 }}>
             {formatBRL(spent)}
           </span>
           {budget > 0 && (
@@ -107,7 +107,7 @@ export default function BudgetManager({ budgets, setBudget, expenses, categories
           <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 34, fontWeight: 700, color: "var(--gold)" }}>
             {formatBRL(totalBudget)}
           </p>
-          <div style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+          <div className="money-blur" style={{ fontSize: 12, color: "var(--text-dim)", marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
             Gasto: {formatBRL(totalSpent)} · Restante: {formatBRL(Math.max(0, totalBudget - totalSpent))}
           </div>
         </div>
