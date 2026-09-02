@@ -13,11 +13,22 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
   const [categoria, setCategoria] = useState(categories.find(c => c.tipo !== "receita")?.key || "");
   const [isRecurring, setIsRecurring] = useState(true);
   const [diaVencimento, setDiaVencimento] = useState(10);
-  const [dataVencimento, setDataVencimento] = useState(todayISO());
-
+  
   const [curKey, setCurKey] = useState(currentMonthKey()); // YYYY-MM
+  const [selectedMonths, setSelectedMonths] = useState([curKey]);
+  const [editFromNowOn, setEditFromNowOn] = useState(true);
   const todayDate = new Date();
   
+  const next12Months = useMemo(() => {
+    const list = [];
+    let k = curKey; 
+    for (let i = 0; i < 12; i++) {
+      list.push(k);
+      k = shiftMonthKey(k, 1);
+    }
+    return list;
+  }, [curKey]);
+
   // Computed bills for the current month
   const currentMonthBills = useMemo(() => {
     return bills.map(bill => {
@@ -46,6 +57,7 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
     }).filter(bill => {
       if (bill.isRecurring) {
         if (bill.startMonth && curKey < bill.startMonth) return false;
+        if (bill.endMonth && curKey > bill.endMonth) return false;
         return true;
       }
       if (bill.status === "overdue" && !bill.isPaid) return true;
@@ -62,14 +74,18 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
     setValorMasked("");
     setIsRecurring(true);
     setDiaVencimento(10);
-    setDataVencimento(todayISO());
+    setSelectedMonths([curKey]);
+    setEditFromNowOn(true);
     setEditingId(null);
     setShowForm(false);
   }
 
+  const originalBill = bills.find(b => b.id === editingId);
+
   function handleSave() {
     const valor = currencyToNumber(valorMasked);
     if (!descricao.trim() || valor <= 0) return alert("Preencha descrição e valor corretamente.");
+    if (!isRecurring && selectedMonths.length === 0) return alert("Selecione pelo menos um mês.");
 
     const payload = {
       descricao,
@@ -78,21 +94,35 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
       isRecurring,
     };
     
-    if (isRecurring) {
-      payload.diaVencimento = Number(diaVencimento);
-    } else {
-      payload.dataVencimento = dataVencimento;
-      payload.paid = false;
-    }
-
     if (editingId) {
-      updateBill(editingId, payload);
+      if (isRecurring) {
+        payload.diaVencimento = Number(diaVencimento);
+        if (editFromNowOn && originalBill?.isRecurring) {
+          updateBill(editingId, { endMonth: shiftMonthKey(curKey, -1) });
+          const futurePaid = (originalBill.paidMonths || []).filter(m => m >= curKey);
+          addBill({ ...payload, startMonth: curKey, paidMonths: futurePaid });
+        } else {
+          updateBill(editingId, payload);
+        }
+      } else {
+        payload.dataVencimento = `${selectedMonths[0]}-${String(diaVencimento).padStart(2, "0")}`;
+        updateBill(editingId, payload);
+      }
     } else {
       if (isRecurring) {
+        payload.diaVencimento = Number(diaVencimento);
         payload.startMonth = curKey;
         payload.paidMonths = [];
+        addBill(payload);
+      } else {
+        selectedMonths.forEach(mk => {
+           addBill({
+             ...payload,
+             dataVencimento: `${mk}-${String(diaVencimento).padStart(2, "0")}`,
+             paid: false
+           });
+        });
       }
-      addBill(payload);
     }
     resetForm();
   }
@@ -133,10 +163,15 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
     setValorMasked(maskCurrency(bill.valor.toFixed(2)));
     setCategoria(bill.categoria);
     setIsRecurring(bill.isRecurring || false);
+    setEditFromNowOn(true);
+    
     if (bill.isRecurring) {
       setDiaVencimento(bill.diaVencimento);
+      setSelectedMonths([curKey]);
     } else {
-      setDataVencimento(bill.dataVencimento || todayISO());
+      const pts = bill.dataVencimento.split("-");
+      setDiaVencimento(Number(pts[2]));
+      setSelectedMonths([`${pts[0]}-${pts[1]}`]);
     }
     setShowForm(true);
   }
@@ -252,16 +287,55 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
             </div>
           </div>
 
-          {isRecurring ? (
-            <div className="form-group">
-              <label className="label">Dia do Vencimento (1 a 31)</label>
-              <input className="input" type="number" min={1} max={31} value={diaVencimento} onChange={e => setDiaVencimento(e.target.value)} />
+          <div className="form-group">
+            <label className="label">Dia do Vencimento (1 a 31)</label>
+            <input className="input" type="number" min={1} max={31} value={diaVencimento} onChange={e => setDiaVencimento(e.target.value)} />
+          </div>
+
+          {!isRecurring && !editingId && (
+            <div className="form-group" style={{ marginTop: 16 }}>
+              <label className="label" style={{ marginBottom: 8 }}>Repetir nestes meses (seleção múltipla)</label>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {next12Months.map(mk => (
+                  <div 
+                    key={mk}
+                    onClick={() => {
+                      if (selectedMonths.includes(mk)) {
+                        setSelectedMonths(selectedMonths.filter(m => m !== mk));
+                      } else {
+                        setSelectedMonths([...selectedMonths, mk]);
+                      }
+                    }}
+                    style={{
+                      padding: "8px", textAlign: "center", fontSize: 12, borderRadius: 6, cursor: "pointer",
+                      background: selectedMonths.includes(mk) ? "rgba(61, 214, 140, 0.15)" : "var(--bg-hover)",
+                      color: selectedMonths.includes(mk) ? "var(--sage)" : "var(--text-muted)",
+                      border: `1px solid ${selectedMonths.includes(mk) ? "var(--sage)" : "var(--border)"}`
+                    }}
+                  >
+                    {monthLabel(mk)}
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="form-group">
-              <label className="label">Data de Vencimento</label>
-              <input className="input" type="date" value={dataVencimento} onChange={e => setDataVencimento(e.target.value)} />
+          )}
+          
+          {!isRecurring && editingId && (
+            <div className="form-group" style={{ marginTop: 16 }}>
+              <label className="label">Mês de Vencimento</label>
+              <div style={{ padding: "10px", background: "var(--bg-hover)", borderRadius: 6, color: "var(--text-muted)", fontSize: 14 }}>
+                {monthLabel(selectedMonths[0])}
+              </div>
             </div>
+          )}
+
+          {isRecurring && editingId && (
+             <div className="form-group" style={{ marginTop: 16, padding: 12, background: "rgba(91, 141, 239, 0.08)", border: "1px solid rgba(91, 141, 239, 0.2)", borderRadius: 8 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", fontSize: 13, color: "var(--blue)" }}>
+                  <input type="checkbox" checked={editFromNowOn} onChange={e => setEditFromNowOn(e.target.checked)} style={{ width: 16, height: 16 }} />
+                  Aplicar novo valor apenas a partir deste mês ({monthLabel(curKey)})
+                </label>
+             </div>
           )}
 
           <button className="btn-primary" onClick={handleSave} style={{ width: "100%", marginTop: 8 }}>
