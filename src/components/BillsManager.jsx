@@ -107,6 +107,14 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
       } else {
         payload.dataVencimento = `${selectedMonths[0]}-${String(diaVencimento).padStart(2, "0")}`;
         updateBill(editingId, payload);
+        
+        for (let i = 1; i < selectedMonths.length; i++) {
+           addBill({
+             ...payload,
+             dataVencimento: `${selectedMonths[i]}-${String(diaVencimento).padStart(2, "0")}`,
+             paid: false
+           });
+        }
       }
     } else {
       if (isRecurring) {
@@ -292,9 +300,11 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
             <input className="input" type="number" min={1} max={31} value={diaVencimento} onChange={e => setDiaVencimento(e.target.value)} />
           </div>
 
-          {!isRecurring && !editingId && (
+          {!isRecurring && (
             <div className="form-group" style={{ marginTop: 16 }}>
-              <label className="label" style={{ marginBottom: 8 }}>Repetir nestes meses (seleção múltipla)</label>
+              <label className="label" style={{ marginBottom: 8 }}>
+                {editingId ? "Repetir nestes meses (seleção múltipla)" : "Repetir nestes meses (seleção múltipla)"}
+              </label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                 {next12Months.map(mk => (
                   <div 
@@ -316,15 +326,6 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
                     {monthLabel(mk)}
                   </div>
                 ))}
-              </div>
-            </div>
-          )}
-          
-          {!isRecurring && editingId && (
-            <div className="form-group" style={{ marginTop: 16 }}>
-              <label className="label">Mês de Vencimento</label>
-              <div style={{ padding: "10px", background: "var(--bg-hover)", borderRadius: 6, color: "var(--text-muted)", fontSize: 14 }}>
-                {monthLabel(selectedMonths[0])}
               </div>
             </div>
           )}
