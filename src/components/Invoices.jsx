@@ -138,6 +138,7 @@ export default function Invoices({ expenses, cards, paidInvoices, toggleInvoiceP
                           <div style={{ display: "flex", flexDirection: "column" }}>
                             <span style={{ color: "var(--text)" }}>{item.exp.descricao}</span>
                             <span style={{ color: "var(--text-dim)", fontSize: 11 }}>{dateStr} {item.totalInst !== 1 && `(Parc. ${item.index}/${item.totalInst})`}</span>
+                            {item.exp.notas && <span style={{ color: "var(--text-dim)", fontSize: 11, fontStyle: "italic", marginTop: 2 }}>{item.exp.notas}</span>}
                           </div>
                           <span className="money-blur" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{formatBRL(item.value)}</span>
                         </div>
