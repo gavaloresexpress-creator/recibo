@@ -27,6 +27,7 @@ export function useExpenseStore(userId) {
   const [expenses, setExpenses] = useState([]);
   const [bills,    setBills]    = useState([]);
   const [cards,    setCards]    = useState(DEFAULT_CARDS);
+  const [paidInvoices, setPaidInvoices] = useState({});
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [splitterEnvelopes, setSplitterEnvelopes] = useState(DEFAULT_SPLITTER);
   const [loading,  setLoading]  = useState(true);
@@ -48,19 +49,21 @@ export function useExpenseStore(userId) {
 
     setLoading(true);
 
-    // Carrega cartões (documento único)
+    // Carrega cartões e faturas pagas (documento único)
     getDoc(cardsDoc(userId)).then((snap) => {
       if (snap.exists()) {
-        const userCards = snap.data().list || DEFAULT_CARDS;
-        // Migra cartões antigos (strings) para objetos
+        const data = snap.data();
+        const userCards = data.list || DEFAULT_CARDS;
         const migrated = userCards.map(c => 
           typeof c === "string" 
             ? { id: c, name: c, fechamento: 25, vencimento: 1 } 
             : c
         );
         setCards(migrated);
+        setPaidInvoices(data.paidInvoices || {});
       } else {
         setCards(DEFAULT_CARDS);
+        setPaidInvoices({});
       }
     });
 
@@ -155,7 +158,6 @@ export function useExpenseStore(userId) {
     }
   }, [userId, expenses]);
 
-  // ── Adicionar cartão ─────────────────────────────────────────
   const addCard = useCallback(async (cardObj) => {
     if (!userId || !cardObj || cards.find(c => c.id === cardObj.id)) return;
     const newList = [...cards, cardObj];
@@ -166,6 +168,18 @@ export function useExpenseStore(userId) {
       console.error("addCard error:", err);
     }
   }, [userId, cards]);
+
+  const toggleInvoicePaid = useCallback(async (cardId, monthKey) => {
+    if (!userId) return;
+    const invoiceKey = `${cardId}_${monthKey}`;
+    const newPaidInvoices = { ...paidInvoices, [invoiceKey]: !paidInvoices[invoiceKey] };
+    setPaidInvoices(newPaidInvoices);
+    try {
+      await setDoc(cardsDoc(userId), { paidInvoices: newPaidInvoices }, { merge: true });
+    } catch (err) {
+      console.error("toggleInvoicePaid error:", err);
+    }
+  }, [userId, paidInvoices]);
 
   // ── Remover cartão ───────────────────────────────────────────
   const removeCard = useCallback(async (id) => {
@@ -276,5 +290,5 @@ export function useExpenseStore(userId) {
     }
   }, [userId, bills]);
 
-  return { expenses, cards, categories, splitterEnvelopes, bills, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, updateCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes, addBill, deleteBill, updateBill };
+  return { expenses, cards, paidInvoices, toggleInvoicePaid, categories, splitterEnvelopes, bills, loading, addExpense, deleteExpense, updateExpense, addCard, removeCard, updateCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes, addBill, deleteBill, updateBill };
 }

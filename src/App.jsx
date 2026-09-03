@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { LogOut, Sun, Moon, Eye, EyeOff } from "lucide-react";
+import { LogOut, Sun, Moon, Eye, EyeOff, Menu } from "lucide-react";
 import { useAuth }          from "./hooks/useAuth";
 import { useExpenseStore }  from "./hooks/useExpenseStore";
 import { useBudgetStore }   from "./hooks/useBudgetStore";
@@ -14,11 +14,13 @@ import Report         from "./components/Report";
 import BudgetManager  from "./components/BudgetManager";
 import BillsManager   from "./components/BillsManager";
 import FinanceSplitter from "./components/FinanceSplitter";
+import Invoices        from "./components/Invoices";
+import Sidebar         from "./components/Sidebar";
 
 // ─────────────────────────────────────────────────────────────
 //  Header com info do usuário logado
 // ─────────────────────────────────────────────────────────────
-function Header({ expenses, user, onSignOut }) {
+function Header({ expenses, user, onSignOut, onOpenMenu }) {
   const curKey = currentMonthKey();
 
   const [isLightMode, setIsLightMode] = useState(() => {
@@ -50,10 +52,15 @@ function Header({ expenses, user, onSignOut }) {
   }, [hideValues]);
 
   return (
-    <header className="header">
-      <div className="header__brand">
-        <h1 className="header__title">Recibo</h1>
-        <p className="header__sub">Controle de gastos e cartões</p>
+    <header className="header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button className="icon-btn" onClick={onOpenMenu} style={{ background: "none", border: "none", color: "var(--text)", padding: 0 }}>
+          <Menu size={24} />
+        </button>
+        <div className="header__brand" style={{ margin: 0 }}>
+          <h1 className="header__title" style={{ fontSize: 20 }}>Recibo</h1>
+          <p className="header__sub" style={{ display: "none" }}>Controle de gastos</p>
+        </div>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -156,7 +163,7 @@ export default function App() {
 
   const userId = user?.uid ?? null;
 
-  const { expenses, cards, categories, splitterEnvelopes, bills, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, updateCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes, addBill, deleteBill, updateBill }
+  const { expenses, cards, categories, splitterEnvelopes, bills, loading: dataLoading, addExpense, deleteExpense, updateExpense, addCard, removeCard, updateCard, addCategory, updateCategory, deleteCategory, updateSplitterEnvelopes, addBill, deleteBill, updateBill, paidInvoices, toggleInvoicePaid }
     = useExpenseStore(userId);
 
   const { budgets, setBudget }
@@ -166,6 +173,7 @@ export default function App() {
   const [toast,        setToast]        = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [editTarget,   setEditTarget]   = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleSaved = useCallback((tipoStr = "despesa") => {
     const noun = tipoStr === "receita" ? "Recebimento" : "Gasto";
@@ -208,7 +216,8 @@ export default function App() {
   // ── App principal ────────────────────────────────────────────
   return (
     <div className="app">
-      <Header expenses={expenses} user={user} onSignOut={signOut} />
+      <Header expenses={expenses} user={user} onSignOut={signOut} onOpenMenu={() => setIsSidebarOpen(true)} />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} active={tab} onChange={setTab} />
 
       <main className="main-content" id="main-content" role="main">
         {dataLoading ? (
@@ -271,6 +280,14 @@ export default function App() {
             )}
             {tab === "splitter" && (
               <FinanceSplitter envelopes={splitterEnvelopes} onUpdateEnvelopes={updateSplitterEnvelopes} />
+            )}
+            {tab === "invoices" && (
+              <Invoices
+                expenses={expenses}
+                cards={cards}
+                paidInvoices={paidInvoices}
+                toggleInvoicePaid={toggleInvoicePaid}
+              />
             )}
           </>
         )}
