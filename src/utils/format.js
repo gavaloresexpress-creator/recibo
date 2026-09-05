@@ -76,16 +76,16 @@ export function getInstallmentEntries(expense, cards = []) {
   const valorParcela = isRecurring ? Number(expense.valor) : Number(expense.valor) / parcelas;
 
   let startY, startM;
-  // 1. Se tem cartão, tenta calcular o mês inicial usando a lógica de fechamento da fatura
-  // Tratamento de legado: gastos antigos podem não ter 'formaPagamento' salvo no banco.
   const isCredit = expense.formaPagamento === "credito" || (!expense.formaPagamento && expense.cartao);
   
-  if (isCredit && expense.cartao && expense.data) {
+  // Prioriza o mês salvo na compra (evita que mudanças futuras no fechamento do cartão afetem compras antigas)
+  if (expense.mesInicioParcelas) {
+    [startY, startM] = expense.mesInicioParcelas.split("-").map(Number);
+  } else if (isCredit && expense.cartao && expense.data) {
+    // Tratamento de legado para compras antigas que não salvaram mesInicioParcelas
     const cardObj = cards.find(c => c.id === expense.cartao || c.name === expense.cartao);
     const invoiceMonth = getInvoiceMonth(expense.data, cardObj);
     [startY, startM] = invoiceMonth.split("-").map(Number);
-  } else if (expense.mesInicioParcelas) {
-    [startY, startM] = expense.mesInicioParcelas.split("-").map(Number);
   } else {
     [startY, startM] = expense.data.split("-").map(Number);
   }

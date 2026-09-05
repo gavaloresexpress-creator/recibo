@@ -353,7 +353,12 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
                           const pm = PAYMENT_METHODS.find(m => m.key === (e.formaPagamento || "credito"));
                           return <span style={{ color: pm?.color }}>{pm?.icon} {pm?.label}</span>;
                         })()}
-                        {e.cartao && ` · ${e.cartao}`}
+                        {e.cartao && (
+                          (() => {
+                            const cObj = cards.find(c => c.id === e.cartao || c === e.cartao);
+                            return ` · ${cObj ? (cObj.name || cObj) : e.cartao}`;
+                          })()
+                        )}
                         {" · "}{cat?.label}
                         {e.parcelas > 1 && (
                           <span className="badge badge--parcelas" style={{ marginLeft: 6 }}>

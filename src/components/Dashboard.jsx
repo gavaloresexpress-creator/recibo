@@ -193,9 +193,12 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
       map[e.cartao] = (map[e.cartao] || 0) + e.value;
     });
     return Object.entries(map)
-      .map(([name, value]) => ({ name, value }))
+      .map(([id, value]) => {
+        const cObj = cards.find(c => c.id === id || c === id);
+        return { name: cObj ? (cObj.name || cObj) : id, value };
+      })
       .sort((a, b) => b.value - a.value);
-  }, [curEntries, expenses]);
+  }, [curEntries, expenses, cards]);
 
   // ── Gráfico: 4 meses anteriores + atual + 4 futuros ──
   const chartData = useMemo(() => {
@@ -882,7 +885,13 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
               <div className="list-row__main">
                 <div className="list-row__desc">{e.descricao}</div>
                 <div className="list-row__meta">
-                  {e.data.split("-").reverse().join("/")} · {e.cartao}
+                  {e.data.split("-").reverse().join("/")}
+                  {e.cartao && (
+                    (() => {
+                      const cObj = cards.find(c => c.id === e.cartao || c === e.cartao);
+                      return ` · ${cObj ? (cObj.name || cObj) : e.cartao}`;
+                    })()
+                  )}
                   {e.parcelas > 1 && (
                     <span className="badge badge--parcelas" style={{ marginLeft: 6 }}>
                       {e.parcelas}x

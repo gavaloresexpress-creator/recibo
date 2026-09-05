@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, X, CreditCard, Eye, EyeOff, Settings, Trash2 } from "lucide-react";
 import { INSTALLMENT_OPTIONS, PAYMENT_METHODS } from "../constants";
 import {
-  todayISO, formatBRL, maskCurrency, currencyToNumber,
+  todayISO, formatBRL, maskCurrency, currencyToNumber, getInvoiceMonth
 } from "../utils/format";
 
 function AutocompleteInput({ value, onChange, suggestions, placeholder, className }) {
@@ -56,12 +56,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
   const [categoria, setCategoria]     = useState(categories[0]?.key || "");
   const [cartao, setCartao]           = useState(cards[0]?.id || cards[0] || "");
   const [parcelas, setParcelas]       = useState(1);
-  const [mesInicioParcelas, setMesInicioParcelas] = useState(() => {
-    // Default: próximo mês
-    const d = new Date();
-    d.setMonth(d.getMonth() + 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  });
+  const [mesInicioParcelas, setMesInicioParcelas] = useState("");
   const [showAddCard, setShowAddCard] = useState(false);
   const [showCardManager, setShowCardManager] = useState(false);
   const [newCard, setNewCard]         = useState("");
@@ -104,6 +99,15 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
     if (!cartao && cards.length && !initialExpense) setCartao(cards[0]?.id || cards[0]);
   }, [cards, cartao, initialExpense]);
 
+  // Calcula o mês da fatura automaticamente quando a data ou cartão mudam
+  useEffect(() => {
+    if (formaPagamento === "credito" && cartao && data) {
+      const cObj = cards.find(c => c.id === cartao || c.name === cartao);
+      const invoiceM = getInvoiceMonth(data, cObj);
+      setMesInicioParcelas(invoiceM);
+    }
+  }, [data, cartao, formaPagamento, cards]);
+
   const valor = currencyToNumber(valorMasked);
   const parcelasNum = Math.max(1, Number(parcelas) || 1);
   const valorParcela = valor > 0 ? valor / parcelasNum : 0;
@@ -135,7 +139,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       isRecurring,
       parcelas: (formaPagamento === "credito" && !isRecurring && tipo === "despesa") ? parcelasNum : 1,
       formaPagamento,
-      mesInicioParcelas: formaPagamento === "credito" && parcelasNum > 1 && !isRecurring && tipo === "despesa" ? mesInicioParcelas : null,
+      mesInicioParcelas: formaPagamento === "credito" && !isRecurring && tipo === "despesa" ? mesInicioParcelas : null,
     });
     // Reset
     setValorMasked("");
@@ -147,10 +151,11 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
     setData(todayISO());
     setErrors({});
     setShowPreview(false);
-    // Reset mesInicioParcelas to next month
-    const nd = new Date();
-    nd.setMonth(nd.getMonth() + 1);
-    setMesInicioParcelas(`${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, "0")}`);
+    // Recalcula o mês de fatura após resetar a data
+    if (cards.length > 0) {
+      const cObj = cards.find(c => c.id === (cartao || cards[0]?.id));
+      setMesInicioParcelas(getInvoiceMonth(todayISO(), cObj));
+    }
     onSaved(tipo);
   }
 
