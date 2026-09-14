@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import HelpIcon from "./HelpIcon";
 
-import { formatBRL, currentMonthKey, getPurchaseEntries } from "../utils/format";
+import { formatBRL, currentMonthKey, getInstallmentEntries } from "../utils/format";
 import { maskCurrency, currencyToNumber } from "../utils/format";
 
 function BudgetRow({ cat, budget, spent, onSave }) {
@@ -84,7 +84,7 @@ export default function BudgetManager({ budgets, setBudget, expenses, categories
   const spentByCategory = useMemo(() => {
     const entries = expenses
       .filter((e) => e.tipo !== "receita")
-      .flatMap((e) => getPurchaseEntries(e))
+      .flatMap((e) => getInstallmentEntries(e, cards))
       .filter((e) => e.key === curKey);
     const map = {};
     entries.forEach((e) => { map[e.categoria] = (map[e.categoria] || 0) + e.value; });
