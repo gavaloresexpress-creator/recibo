@@ -115,9 +115,7 @@ export function getPurchaseEntries(expense) {
   const valorParcela = isRecurring ? Number(expense.valor) : Number(expense.valor) / parcelas;
 
   let startY, startM;
-  if (expense.mesInicioParcelas) {
-    [startY, startM] = expense.mesInicioParcelas.split("-").map(Number);
-  } else if (expense.data) {
+  if (expense.data) {
     [startY, startM] = expense.data.split("-").map(Number);
   } else {
     return [];
