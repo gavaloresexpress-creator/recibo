@@ -1,11 +1,16 @@
 import { useState, useMemo } from "react";
 import { formatBRL, currentMonthKey, todayISO, maskCurrency, currencyToNumber, monthLabel, shiftMonthKey } from "../utils/format";
+import { PAYMENT_METHODS } from "../constants";
 import { Check, Clock, AlertCircle, Plus, X, ChevronLeft, ChevronRight, Edit3 } from "lucide-react";
 import HelpIcon from "./HelpIcon";
 
 export default function BillsManager({ bills, addBill, updateBill, deleteBill, categories, addExpense }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  
+  // Payment modal states
+  const [payingBill, setPayingBill] = useState(null);
+  const [payMethod, setPayMethod] = useState("pix");
 
   // Form states
   const [descricao, setDescricao] = useState("");
@@ -136,27 +141,32 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
   }
 
   function handleMarkAsPaid(bill) {
-    const shouldPay = confirm(`Deseja marcar '${bill.descricao}' como paga e lançar o gasto no seu relatório financeiro?`);
-    
-    if (!shouldPay) return;
+    setPayingBill(bill);
+    setPayMethod("pix"); // default
+  }
+
+  function confirmPay() {
+    if (!payingBill) return;
 
     addExpense({
-      descricao: bill.descricao,
-      valor: bill.valor,
-      data: bill.dueDateStr,
-      categoria: bill.categoria,
+      descricao: payingBill.descricao,
+      valor: payingBill.valor,
+      data: payingBill.dueDateStr,
+      categoria: payingBill.categoria,
       tipo: "despesa",
       isRecurring: false,
-      formaPagamento: "dinheiro",
+      formaPagamento: payMethod,
       parcelas: 1,
       cartao: null
     });
 
-    if (bill.isRecurring) {
-      updateBill(bill.id, { paidMonths: [...(bill.paidMonths || []), curKey] });
+    if (payingBill.isRecurring) {
+      updateBill(payingBill.id, { paidMonths: [...(payingBill.paidMonths || []), curKey] });
     } else {
-      updateBill(bill.id, { paid: true });
+      updateBill(payingBill.id, { paid: true });
     }
+    
+    setPayingBill(null);
   }
 
   function handleDelete(bill) {
@@ -389,6 +399,40 @@ export default function BillsManager({ bills, addBill, updateBill, deleteBill, c
             {paidBills.map(b => (
               <BillRow key={b.id} bill={b} onPay={null} isPaid onDelete={() => handleDelete(b)} onEdit={() => handleEdit(b)} />
             ))}
+          </div>
+        </div>
+      )}
+
+      {payingBill && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h3 style={{ marginBottom: 12, color: "var(--text)" }}>Marcar como paga</h3>
+            <p style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
+              Deseja marcar <strong>{payingBill.descricao}</strong> como paga e lançar no seu relatório financeiro?
+            </p>
+            
+            <div className="form-group" style={{ marginBottom: 20 }}>
+              <label className="label">Forma de Pagamento</label>
+              <div className="radio-group" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {PAYMENT_METHODS.filter(m => m.key !== "credito").map(m => (
+                  <button
+                    key={m.key}
+                    type="button"
+                    className={`radio-btn ${payMethod === m.key ? "active" : ""}`}
+                    onClick={() => setPayMethod(m.key)}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+              <button className="btn-secondary" onClick={() => setPayingBill(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={confirmPay} style={{ background: "var(--sage)", color: "#111" }}>
+                Confirmar Pagamento
+              </button>
+            </div>
           </div>
         </div>
       )}
