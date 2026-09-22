@@ -94,6 +94,9 @@ export function getInstallmentEntries(expense, cards = []) {
   for (let i = 0; i < parcelas; i++) {
     const dt = new Date(startY, startM - 1 + i, 1);
     const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    if (isRecurring && expense.endMonth && key > expense.endMonth) {
+      continue;
+    }
     entries.push({
       key,
       value: valorParcela,
@@ -125,6 +128,9 @@ export function getPurchaseEntries(expense) {
   for (let i = 0; i < parcelas; i++) {
     const dt = new Date(startY, startM - 1 + i, 1);
     const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    if (isRecurring && expense.endMonth && key > expense.endMonth) {
+      continue;
+    }
     entries.push({
       key,
       value: valorParcela,

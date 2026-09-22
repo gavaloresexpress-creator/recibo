@@ -232,7 +232,8 @@ export default function App() {
                 cards={cards}
                 categories={categories}
                 expenses={expenses}
-                onAdd={editTarget ? (data) => updateExpense(editTarget.id, data) : addExpense}
+                addExpense={addExpense}
+                updateExpense={updateExpense}
                 onAddCard={addCard}
                 onUpdateCard={updateCard}
                 onRemoveCard={removeCard}

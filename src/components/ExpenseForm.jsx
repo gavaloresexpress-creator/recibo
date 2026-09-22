@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Plus, X, CreditCard, Eye, EyeOff, Settings, Trash2 } from "lucide-react";
 import { INSTALLMENT_OPTIONS, PAYMENT_METHODS } from "../constants";
 import {
-  todayISO, formatBRL, maskCurrency, currencyToNumber, getInvoiceMonth
+  todayISO, formatBRL, maskCurrency, currencyToNumber, getInvoiceMonth, currentMonthKey, shiftMonthKey
 } from "../utils/format";
 
 function AutocompleteInput({ value, onChange, suggestions, placeholder, className }) {
@@ -48,7 +48,7 @@ function AutocompleteInput({ value, onChange, suggestions, placeholder, classNam
   );
 }
 
-export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddCard, onUpdateCard, onRemoveCard, addCategory, updateCategory, deleteCategory, onSaved, initialExpense, onCancelEdit }) {
+export default function ExpenseForm({ cards, categories, expenses, addExpense, updateExpense, onAddCard, onUpdateCard, onRemoveCard, addCategory, updateCategory, deleteCategory, onSaved, initialExpense, onCancelEdit }) {
   const [valorMasked, setValorMasked] = useState("");
   const [data, setData]               = useState(todayISO());
   const [descricao, setDescricao]     = useState("");
@@ -71,6 +71,7 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
   const [newCatIcon, setNewCatIcon]   = useState("");
   const [newCatColor, setNewCatColor] = useState("#3B82F6");
   const [editingCatKey, setEditingCatKey] = useState(null);
+  const [editFromNowOn, setEditFromNowOn] = useState(true);
 
   // Histórico de descrições para autocomplete
   const descHistory = [...new Set(expenses.map((e) => e.descricao))];
@@ -128,7 +129,8 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
 
   function handleSubmit() {
     if (!validate()) return;
-    onAdd({
+    
+    const payload = {
       valor,
       data,
       descricao: descricao.trim(),
@@ -140,7 +142,24 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
       parcelas: (formaPagamento === "credito" && !isRecurring && tipo === "despesa") ? parcelasNum : 1,
       formaPagamento,
       mesInicioParcelas: formaPagamento === "credito" && !isRecurring && tipo === "despesa" ? mesInicioParcelas : null,
-    });
+    };
+
+    if (initialExpense) {
+      if (editFromNowOn && initialExpense.isRecurring) {
+        const curKey = currentMonthKey();
+        updateExpense(initialExpense.id, { endMonth: shiftMonthKey(curKey, -1) });
+        payload.data = todayISO();
+        if (formaPagamento === "credito" && cartao) {
+           const cObj = cards.find(c => c.id === cartao || c.name === cartao);
+           payload.mesInicioParcelas = getInvoiceMonth(payload.data, cObj);
+        }
+        addExpense(payload);
+      } else {
+        updateExpense(initialExpense.id, payload);
+      }
+    } else {
+      addExpense(payload);
+    }
     // Reset
     setValorMasked("");
     setDescricao("");
@@ -651,6 +670,22 @@ export default function ExpenseForm({ cards, categories, expenses, onAdd, onAddC
               return d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }).replace(".", "");
             }).join(", ")}
           </p>
+        </div>
+      )}
+
+      {initialExpense && initialExpense.isRecurring && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 4, background: "var(--bg-hover)", padding: "12px", borderRadius: "var(--r-md)", border: "1px solid var(--border-lg)" }}>
+          <input
+            type="checkbox"
+            id="edit-from-now-on"
+            checked={editFromNowOn}
+            onChange={(e) => setEditFromNowOn(e.target.checked)}
+            style={{ width: 16, height: 16, accentColor: "var(--gold)", cursor: "pointer" }}
+          />
+          <label htmlFor="edit-from-now-on" style={{ fontSize: 13, color: "var(--text)", cursor: "pointer", flex: 1, userSelect: "none" }}>
+            <strong style={{ display: "block", marginBottom: 2 }}>Alterar valor apenas daqui em diante?</strong>
+            <span style={{ color: "var(--text-muted)", fontSize: 11, fontWeight: 400 }}>Marcando esta opção, os meses anteriores não serão afetados.</span>
+          </label>
         </div>
       )}
 
