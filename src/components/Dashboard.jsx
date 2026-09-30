@@ -679,7 +679,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
           </div>
         </div>
         <ResponsiveContainer width="100%" height={210}>
-          <ComposedChart data={chartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+          <ComposedChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#2A3550" vertical={false} />
             <XAxis
               dataKey="label"
@@ -700,7 +700,7 @@ export default function Dashboard({ expenses, categories, cards = [], budgets = 
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v}
-              width={38}
+              width={45}
             />
             <Tooltip
               content={({ active, payload, label }) => {
