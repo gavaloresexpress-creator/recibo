@@ -226,20 +226,20 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
           
           {/* Período Específico */}
           <div className="filters__row" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <div className="select hover-border" style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 8, background: "var(--overlay-dark)", padding: "9px 12px" }}>
+            <div className="select hover-border" style={{ flex: 1, minWidth: "130px", display: "flex", alignItems: "center", gap: 4, background: "var(--overlay-dark)", padding: "8px 8px" }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>DE:</span>
               <input 
                 type="date" 
-                style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: 1, fontSize: '14px', margin: 0, padding: 0 }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: 1, fontSize: '13px', margin: 0, padding: 0, minWidth: 0 }}
                 value={startDate} 
                 onChange={e => setStartDate(e.target.value)} 
               />
             </div>
-            <div className="select hover-border" style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 8, background: "var(--overlay-dark)", padding: "9px 12px" }}>
+            <div className="select hover-border" style={{ flex: 1, minWidth: "130px", display: "flex", alignItems: "center", gap: 4, background: "var(--overlay-dark)", padding: "8px 8px" }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>ATÉ:</span>
               <input 
                 type="date" 
-                style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: 1, fontSize: '14px', margin: 0, padding: 0 }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: 1, fontSize: '13px', margin: 0, padding: 0, minWidth: 0 }}
                 value={endDate} 
                 onChange={e => setEndDate(e.target.value)} 
               />
