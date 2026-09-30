@@ -123,14 +123,14 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
       <div style={{ position: "relative" }}>
         <button 
           type="button"
-          className="select" 
+          className="select hover-border" 
           style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', background: 'var(--overlay-dark)' }}
           onClick={() => setOpen(!open)}
         >
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: value.length > 0 ? "var(--text)" : "var(--text-muted)" }}>
             {isAll ? label : `${value.length} selec.`}
           </span>
-          <span style={{ fontSize: '10px', marginLeft: '4px' }}>▼</span>
+          <span style={{ fontSize: '10px', marginLeft: '4px', transform: open ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
         </button>
 
         {open && (
@@ -226,20 +226,20 @@ export default function Report({ expenses, cards, categories, onDeleteRequest, o
           
           {/* Período Específico */}
           <div className="filters__row" style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 6, background: "var(--overlay-dark)", border: "1.5px solid var(--border)", borderRadius: "var(--r-sm)", padding: "4px 8px" }}>
+            <div className="select hover-border" style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 8, background: "var(--overlay-dark)", padding: "9px 12px" }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>DE:</span>
               <input 
                 type="date" 
-                style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: 1, fontSize: '13px' }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: 1, fontSize: '14px', margin: 0, padding: 0 }}
                 value={startDate} 
                 onChange={e => setStartDate(e.target.value)} 
               />
             </div>
-            <div style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 6, background: "var(--overlay-dark)", border: "1.5px solid var(--border)", borderRadius: "var(--r-sm)", padding: "4px 8px" }}>
+            <div className="select hover-border" style={{ flex: 1, minWidth: "120px", display: "flex", alignItems: "center", gap: 8, background: "var(--overlay-dark)", padding: "9px 12px" }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>ATÉ:</span>
               <input 
                 type="date" 
-                style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: 1, fontSize: '13px' }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text)', outline: 'none', flex: 1, fontSize: '14px', margin: 0, padding: 0 }}
                 value={endDate} 
                 onChange={e => setEndDate(e.target.value)} 
               />

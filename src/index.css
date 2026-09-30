@@ -282,6 +282,17 @@ input, select, textarea { font-family: inherit; }
 .select { cursor: pointer; }
 .select option { background: var(--bg-card); }
 
+.hover-border { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.hover-border:hover { border-color: var(--gold); }
+
+/* Date input calendar icon fix */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0.6);
+  margin: 0;
+  padding: 0;
+}
+
 .textarea {
   resize: vertical;
   min-height: 72px;
