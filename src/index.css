@@ -869,6 +869,15 @@ html.hide-values .money-blur {
 }
 
 /* Remove default focus outline on Recharts pie slices */
-.recharts-sector:focus {
+.recharts-sector {
   outline: none;
+  transition: transform 0.2s ease-out;
+  transform-origin: 50% 50%;
+}
+
+.recharts-sector:focus,
+.recharts-sector:hover {
+  outline: none;
+  transform: scale(1.05);
+  cursor: pointer;
 }
