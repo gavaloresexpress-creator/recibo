@@ -66,11 +66,23 @@ export default function GeminiAssistant({ expenses, categories, cards, addExpens
     setIsProcessing(true);
     setFeedback("Pensando...");
 
+    if (!API_KEY) {
+      setFeedback("Erro: A API Key (VITE_GEMINI_API_KEY) não está configurada.");
+      setIsProcessing(false);
+      return;
+    }
+
     try {
       const model = genAI.getGenerativeModel({ 
         model: "gemini-1.5-flash", 
         generationConfig: { responseMimeType: "application/json" } 
       });
+
+      // Pega apenas os gastos do mês atual para não exceder o limite de contexto
+      const currentMonthPrefix = new Date().toISOString().slice(0, 7);
+      const recentExpenses = expenses
+        .filter(e => e.date && e.date.startsWith(currentMonthPrefix))
+        .map(e => ({ data: e.date, desc: e.description, cat: e.category, valor: e.value, tipo: e.type }));
       
       const prompt = `Você é um assistente financeiro inteligente de um aplicativo chamado "Recibo".
       O usuário disse o seguinte comando de voz: "${text}"
@@ -79,6 +91,9 @@ export default function GeminiAssistant({ expenses, categories, cards, addExpens
       Categorias disponíveis: ${categories.map(c => c.label).join(", ")}
       Cartões disponíveis: ${cards.map(c => typeof c === 'object' ? c.name : c).join(", ")}
       Data de hoje: ${new Date().toISOString().slice(0, 10)}
+      
+      E aqui está o resumo dos gastos/receitas do usuário no mês atual (para você responder perguntas):
+      ${JSON.stringify(recentExpenses)}
 
       Seu objetivo é analisar o comando e retornar APENAS um objeto JSON válido com a exata estrutura abaixo:
       {
@@ -92,18 +107,53 @@ export default function GeminiAssistant({ expenses, categories, cards, addExpens
            "tipo": (string, "despesa" ou "receita"),
            "data": (string, YYYY-MM-DD, a data da compra)
         },
-        "message": (string, a sua resposta falada para o usuário. Seja bem curto, claro e amigável. Se você cadastrou um gasto, confirme de forma natural.)
+        "message": (string, a sua resposta falada para o usuário. Seja bem curto, claro e amigável. Se for uma resposta a uma pergunta de gastos, calcule usando os dados fornecidos e responda. Se você cadastrou um gasto, confirme de forma natural.)
       }`;
 
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const jsonStr = response.text();
-      const parsed = JSON.parse(jsonStr);
+      
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (parseError) {
+        throw new Error("A IA retornou um formato inválido.");
+      }
 
       if (parsed.action === "add_expense" && parsed.data) {
-        // Encontra a key da categoria pelo nome
-        const catObj = categories.find(c => c.label.toLowerCase() === parsed.data.categoria.toLowerCase());
+        // Mapeia Categoria para Key
+        const catObj = categories.find(c => c.label.toLowerCase() === (parsed.data.categoria || "").toLowerCase());
         if (catObj) parsed.data.categoria = catObj.key;
+        else parsed.data.categoria = categories.length > 0 ? categories[0].key : "outros";
+        
+        // Mapeia Cartão para ID
+        let cObj = null;
+        if (parsed.data.cartao) {
+          cObj = cards.find(c => {
+            const name = typeof c === 'string' ? c : c.name;
+            return name.toLowerCase() === parsed.data.cartao.toLowerCase();
+          });
+          if (cObj) parsed.data.cartao = cObj.id || cObj;
+        }
+
+        // Garante os campos obrigatórios
+        parsed.data.isRecurring = false;
+        parsed.data.parcelas = 1;
+        parsed.data.notas = "Via Assistente IA";
+
+        if (parsed.data.formaPagamento === "credito" && parsed.data.tipo === "despesa" && cObj) {
+          const [ano, mes, dia] = parsed.data.data.split("-").map(Number);
+          const dataCompra = new Date(ano, mes - 1, dia);
+          let faturaMes = mes;
+          let faturaAno = ano;
+          
+          if (dia >= (cObj.fechamento || 25)) {
+            faturaMes++;
+            if (faturaMes > 12) { faturaMes = 1; faturaAno++; }
+          }
+          parsed.data.mesInicioParcelas = `${faturaAno}-${String(faturaMes).padStart(2, '0')}`;
+        }
         
         await addExpense(parsed.data);
       }
@@ -119,7 +169,7 @@ export default function GeminiAssistant({ expenses, categories, cards, addExpens
 
     } catch (e) {
       console.error(e);
-      setFeedback("Ocorreu um erro de conexão com a IA.");
+      setFeedback(e.message || "Ocorreu um erro de conexão com a IA.");
     } finally {
       setIsProcessing(false);
     }
