@@ -16,6 +16,7 @@ import BillsManager   from "./components/BillsManager";
 import FinanceSplitter from "./components/FinanceSplitter";
 import Invoices        from "./components/Invoices";
 import Sidebar         from "./components/Sidebar";
+import GeminiAssistant from "./components/GeminiAssistant";
 
 // ─────────────────────────────────────────────────────────────
 //  Header com info do usuário logado
@@ -295,6 +296,15 @@ export default function App() {
       </main>
 
       <Nav active={tab} onChange={setTab} />
+      
+      {!dataLoading && (
+        <GeminiAssistant 
+          expenses={expenses} 
+          categories={categories} 
+          cards={cards} 
+          addExpense={addExpense} 
+        />
+      )}
 
       <Toast message={toast} onClear={() => setToast("")} />
 
