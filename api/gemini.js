@@ -55,9 +55,13 @@ Regras: preencha "data" apenas se action for "add_expense", caso contrário colo
 
     // Tenta modelos em ordem até encontrar um disponível para esta chave
     const models = [
+      "gemini-3.8-flash",
+      "gemini-flash-latest",
+      "gemini-3.7-flash",
+      "gemini-3.5-flash",
+      "gemini-2.5-flash-lite",
       "gemini-2.0-flash",
       "gemini-1.5-flash",
-      "gemini-1.5-flash-latest",
       "gemini-pro",
     ];
 
@@ -66,10 +70,13 @@ Regras: preencha "data" apenas se action for "add_expense", caso contrário colo
 
     for (const modelName of models) {
       geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: "application/json" },
