@@ -53,12 +53,15 @@ Retorne APENAS um objeto JSON válido (sem markdown, sem texto adicional):
 
 Regras: preencha "data" apenas se action for "add_expense", caso contrário coloque null. Para perguntas, calcule com os dados fornecidos.`;
 
-    // Chamada direta à API REST do Gemini v1 (sem SDK, sem v1beta)
+    // Chamada direta à API REST do Gemini (usando Bearer token para chaves no formato AQ.)
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: { responseMimeType: "application/json" },
