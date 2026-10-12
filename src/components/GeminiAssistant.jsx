@@ -62,10 +62,11 @@ export default function GeminiAssistant({ expenses, categories, cards, addExpens
 
     try {
       // Chama o nosso servidor seguro (api/gemini.js), nunca o Gemini diretamente
+      const clientDate = new Date().toLocaleDateString("en-CA");
       const res = await fetch("/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, categories, cards, expenses }),
+        body: JSON.stringify({ text, categories, cards, expenses, clientDate }),
       });
 
       const parsed = await res.json();

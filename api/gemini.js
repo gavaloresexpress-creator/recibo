@@ -8,35 +8,66 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "API Key não configurada no servidor." });
   }
 
-  const { text, categories, cards, expenses } = req.body;
+  const { text, categories, cards, expenses, clientDate } = req.body;
   if (!text) {
     return res.status(400).json({ error: "Texto do comando é obrigatório." });
   }
 
   try {
+    const today = clientDate || new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
+    const currentMonthPrefix = today.slice(0, 7); // ex: "2026-10"
+
     const categoryNames = (categories || []).map((c) => c.label).join(", ");
     const cardNames = (cards || []).map((c) => (typeof c === "object" ? c.name : c)).join(", ");
-    const currentMonthPrefix = new Date().toISOString().slice(0, 7);
-    const recentExpenses = (expenses || [])
-      .filter((e) => e.date && e.date.startsWith(currentMonthPrefix))
-      .map((e) => ({
-        data: e.date,
-        desc: e.descricao,
-        cat: e.categoria,
-        valor: e.valor,
-        tipo: e.tipo,
-      }));
 
-    const prompt = `Você é um assistente financeiro inteligente de um aplicativo chamado "Recibo".
-O usuário disse o seguinte comando de voz: "${text}"
+    const catMap = Object.fromEntries((categories || []).map((c) => [c.key, c.label]));
+    const cardMap = Object.fromEntries(
+      (cards || []).map((c) => [typeof c === "object" ? c.id : c, typeof c === "object" ? c.name : c])
+    );
 
-Dados do usuário:
-Categorias disponíveis: ${categoryNames}
-Cartões disponíveis: ${cardNames}
-Data de hoje: ${new Date().toISOString().slice(0, 10)}
-Gastos do mês atual: ${JSON.stringify(recentExpenses)}
+    // Mapeia os lançamentos tratando tanto 'data' quanto 'date'
+    const recentExpenses = (expenses || []).map((e) => {
+      const expDate = e.data || e.date || "";
+      const catLabel = catMap[e.categoria] || e.categoria || "Outros";
+      const cardName = cardMap[e.cartao] || e.cartao || "";
+      return {
+        data: expDate,
+        desc: e.descricao || "",
+        cat: catLabel,
+        cartao: cardName,
+        forma: e.formaPagamento || "",
+        valor: Number(e.valor) || 0,
+        tipo: e.tipo || "despesa",
+      };
+    });
 
-Retorne APENAS um objeto JSON válido (sem markdown, sem texto adicional):
+    const prompt = `Você é um assistente financeiro inteligente e preciso de um aplicativo chamado "Recibo".
+O usuário disse o seguinte comando ou pergunta por voz: "${text}"
+
+CONTEXTO DO USUÁRIO:
+- Data de hoje: ${today} (formato YYYY-MM-DD)
+- Mês atual: ${currentMonthPrefix}
+- Categorias disponíveis: ${categoryNames}
+- Cartões disponíveis: ${cardNames}
+- Histórico de lançamentos cadastrados (${recentExpenses.length} transações):
+${JSON.stringify(recentExpenses)}
+
+INSTRUÇÕES CRÍTICAS:
+1. CONSULTAS E PERGUNTAS (ex: "quanto gastei...", "quanto sobrou...", "qual foi o valor de...", "quantos reais tive de gasto..."):
+   - "action": "answer"
+   - "data": null
+   - Verifique cuidadosamente a lista de lançamentos fornecida acima.
+   - Para perguntas sobre o mês atual ou "esse mês", filtre lançamentos cuja "data" comece com "${currentMonthPrefix}".
+   - "despesa" representa saídas/gastos. "receita" representa entradas/ganhos.
+   - Calcule a soma com exatidão e responda no campo "message" de forma curta, natural e amigável em português, informando o valor formatado em Reais (ex: R$ 1.250,00).
+
+2. CADASTRO DE GASTO OU RECEITA (ex: "gastei 50 na padaria no débito", "recebi 200 de pix"):
+   - "action": "add_expense"
+   - Preencha o objeto "data" com os dados extraídos.
+   - Use a data de hoje (${today}) se nenhuma data for mencionada.
+   - No campo "message", confirme o lançamento de forma amigável e curta.
+
+Retorne APENAS um objeto JSON válido (sem markdown, sem texto fora do JSON):
 {
   "action": "add_expense" ou "answer",
   "data": {
@@ -49,9 +80,7 @@ Retorne APENAS um objeto JSON válido (sem markdown, sem texto adicional):
     "data": (string: YYYY-MM-DD)
   },
   "message": (string, resposta curta e amigável para o usuário)
-}
-
-Regras: preencha "data" apenas se action for "add_expense", caso contrário coloque null. Para perguntas, calcule com os dados fornecidos.`;
+}`;
 
     // Modelos ordenados por estabilidade e velocidade, com fallback automático
     const models = [
