@@ -53,26 +53,37 @@ Retorne APENAS um objeto JSON válido (sem markdown, sem texto adicional):
 
 Regras: preencha "data" apenas se action for "add_expense", caso contrário coloque null. Para perguntas, calcule com os dados fornecidos.`;
 
-    // Chamada direta à API REST do Gemini (usando Bearer token para chaves no formato AQ.)
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: "application/json" },
-        }),
-      }
-    );
+    // Tenta modelos em ordem até encontrar um disponível para esta chave
+    const models = [
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-1.5-flash-latest",
+      "gemini-pro",
+    ];
+
+    let geminiRes = null;
+    let lastError = null;
+
+    for (const modelName of models) {
+      geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" },
+          }),
+        }
+      );
+      if (geminiRes.ok || geminiRes.status !== 404) break;
+      lastError = modelName;
+    }
 
     if (!geminiRes.ok) {
       const errBody = await geminiRes.text();
       console.error("Gemini API error:", errBody);
-      return res.status(502).json({ error: `Erro na API do Gemini: ${geminiRes.status}` });
+      return res.status(502).json({ error: `Gemini ${geminiRes.status}: ${errBody.slice(0, 200)}` });
     }
 
     const geminiData = await geminiRes.json();
