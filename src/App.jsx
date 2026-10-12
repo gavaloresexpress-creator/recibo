@@ -302,6 +302,7 @@ export default function App() {
           expenses={expenses} 
           categories={categories} 
           cards={cards} 
+          paidInvoices={paidInvoices}
           addExpense={addExpense} 
         />
       )}

@@ -62,7 +62,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "API Key não configurada no servidor." });
   }
 
-  const { text, categories, cards, expenses, clientDate } = req.body;
+  const { text, categories, cards, expenses, paidInvoices, clientDate } = req.body;
   if (!text) {
     return res.status(400).json({ error: "Texto do comando é obrigatório." });
   }
@@ -70,10 +70,6 @@ export default async function handler(req, res) {
   try {
     const today = clientDate || new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
     const currentMonthPrefix = today.slice(0, 7); // ex: "2026-10"
-
-    const [curY, curM] = currentMonthPrefix.split("-").map(Number);
-    const nextMonthDt = new Date(curY, curM, 1);
-    const nextMonthPrefix = `${nextMonthDt.getFullYear()}-${String(nextMonthDt.getMonth() + 1).padStart(2, "0")}`;
 
     const categoryNames = (categories || []).map((c) => c.label).join(", ");
     const cardNames = (cards || []).map((c) => (typeof c === "object" ? c.name : c)).join(", ");
@@ -83,48 +79,70 @@ export default async function handler(req, res) {
       (cards || []).map((c) => [typeof c === "object" ? c.id : c, typeof c === "object" ? c.name : c])
     );
 
-    // Calcula os valores EXATOS das faturas por cartão (idêntico à tela Faturas do app)
+    // Calcula as faturas por cartão (diferenciando a fatura aberta atual da fatura que já venceu/paga)
     const cardInvoices = (cards || []).map((card) => {
       const id = typeof card === "object" ? card.id : card;
       const name = typeof card === "object" ? card.name : card;
       const fechamento = typeof card === "object" ? card.fechamento || 25 : 25;
       const vencimento = typeof card === "object" ? card.vencimento || 1 : 1;
 
-      let totalFaturaAtual = 0;
-      let totalFaturaProxima = 0;
-      const itensFaturaAtual = [];
+      // Mês de vencimento da fatura ABERTA atual (acumulando compras deste mês para pagamento no mês seguinte)
+      const mesFaturaAberta = getInvoiceMonth(today, card); // ex: "2026-11"
+
+      // Mês de vencimento da fatura do mês atual (compras fechadas no mês anterior, que venceram neste mês)
+      const mesFaturaMesAtual = currentMonthPrefix; // ex: "2026-10"
+
+      let totalFaturaAberta = 0;
+      let totalFaturaMesAtual = 0;
+      const itensFaturaAberta = [];
+      const itensFaturaMesAtual = [];
 
       (expenses || []).forEach((exp) => {
         if (exp.cartao !== id && exp.cartao !== name) return;
         const entries = getInstallmentEntries(exp, cards);
         entries.forEach((e) => {
           if (e.tipo === "receita") return;
-          if (e.key === currentMonthPrefix) {
-            totalFaturaAtual += e.value;
-            itensFaturaAtual.push({
+          if (e.key === mesFaturaAberta) {
+            totalFaturaAberta += e.value;
+            itensFaturaAberta.push({
               descricao: exp.descricao,
               valorParcela: Math.round(e.value * 100) / 100,
               parcela: `${e.installmentIndex}/${e.totalInstallments}`,
               dataCompra: exp.data || exp.date,
             });
-          } else if (e.key === nextMonthPrefix) {
-            totalFaturaProxima += e.value;
+          } else if (e.key === mesFaturaMesAtual) {
+            totalFaturaMesAtual += e.value;
+            itensFaturaMesAtual.push({
+              descricao: exp.descricao,
+              valorParcela: Math.round(e.value * 100) / 100,
+              parcela: `${e.installmentIndex}/${e.totalInstallments}`,
+              dataCompra: exp.data || exp.date,
+            });
           }
         });
       });
+
+      const isFaturaMesAtualPaga = !!(
+        paidInvoices &&
+        (paidInvoices[`${id}_${mesFaturaMesAtual}`] || paidInvoices[`${name}_${mesFaturaMesAtual}`])
+      );
 
       return {
         cartao: name,
         fechamento: `dia ${fechamento}`,
         vencimento: `dia ${vencimento}`,
-        faturaAtual: {
-          mes: currentMonthPrefix,
-          total: Math.round(totalFaturaAtual * 100) / 100,
-          itens: itensFaturaAtual,
+        faturaAbertaAtual: {
+          explicacao: `Esta é a fatura ABERTA atual, acumulando as compras feitas neste mês (${today}). Ela fechará no dia ${fechamento} e vencerá no mês que vem (${mesFaturaAberta}).`,
+          mesVencimento: mesFaturaAberta,
+          total: Math.round(totalFaturaAberta * 100) / 100,
+          itens: itensFaturaAberta,
         },
-        faturaProximoMes: {
-          mes: nextMonthPrefix,
-          total: Math.round(totalFaturaProxima * 100) / 100,
+        faturaMesAnteriorVencidaEsteMes: {
+          explicacao: `Fatura referente a compras do mês anterior com vencimento neste mês (${mesFaturaMesAtual}).`,
+          mesVencimento: mesFaturaMesAtual,
+          total: Math.round(totalFaturaMesAtual * 100) / 100,
+          status: isFaturaMesAtualPaga ? "PAGA" : "Vencida / A pagar",
+          itens: itensFaturaMesAtual,
         },
       };
     });
@@ -151,26 +169,33 @@ O usuário disse o seguinte comando ou pergunta por voz: "${text}"
 CONTEXTO DO USUÁRIO:
 - Data de hoje: ${today} (formato YYYY-MM-DD)
 - Mês atual: ${currentMonthPrefix}
-- Próximo mês: ${nextMonthPrefix}
 - Categorias disponíveis: ${categoryNames}
 - Cartões cadastrados: ${cardNames}
 
-VALORES OFICIAIS DAS FATURAS DE CARTÃO DE CRÉDITO (calculados com base no fechamento e parcelamentos do app):
+VALORES OFICIAIS DAS FATURAS DE CARTÃO DE CRÉDITO:
 ${JSON.stringify(cardInvoices, null, 2)}
 
 HISTÓRICO DE LANÇAMENTOS CADASTRADOS (${recentExpenses.length} transações):
 ${JSON.stringify(recentExpenses)}
 
 INSTRUÇÕES CRÍTICAS PARA RESPOSTAS:
-1. PERGUNTAS SOBRE "FATURA" DE CARTÃO (ex: "quanto está minha fatura do Inter?", "qual o valor da fatura?", "fatura do cartão"):
+1. PERGUNTAS SOBRE "FATURA ATUAL" OU "FATURA DO CARTÃO" (ex: "em quantos reais está minha fatura atual?", "quanto está minha fatura no cartão Inter?", "quanto tenho de fatura?"):
    - "action": "answer", "data": null
-   - Use EXCLUSIVAMENTE o bloco "VALORES OFICIAIS DAS FATURAS DE CARTÃO DE CRÉDITO" acima!
-   - O valor da fatura do cartão para o mês atual (${currentMonthPrefix}) é exatamente o campo "faturaAtual.total" daquele cartão.
-   - NUNCA some transações soltas para deduzir o valor da fatura, pois a fatura depende do dia de fechamento do cartão e de parcelas anteriores.
-   - Responda de forma clara, informando o valor exato da fatura do mês atual em Reais (ex: "Sua fatura do cartão Inter para este mês é de R$ X,XX").
-   - Se o usuário perguntar da próxima fatura ou do próximo mês (${nextMonthPrefix}), use "faturaProximoMes.total".
+   - REGRA DE OURO: Quando o usuário pergunta pela sua "fatura atual", ele está se referindo à FATURA ABERTA ATUAL ("faturaAbertaAtual"), que acumula as compras deste mês e será paga no mês que vem!
+   - A fatura anterior que venceu no início deste mês geralmente já foi paga.
+   - Responda informando com clareza o valor da FATURA ABERTA ATUAL (campo "faturaAbertaAtual.total"). Exemplo: "Sua fatura atual do cartão Inter (a ser paga no mês que vem) está em R$ X,XX."
+   - Se a fatura anterior com vencimento neste mês constar como "PAGA", você pode complementar amigavelmente: "A fatura anterior deste mês já consta como paga."
 
-2. PERGUNTAS SOBRE GASTOS GERAIS OU COMPRAS FEITAS NO MÊS (ex: "quanto gastei esse mês?", "quanto gastei com combustível?"):
+2. PERGUNTAS SOBRE FECHAMENTO, VENCIMENTO OU EM QUAL FATURA UMA COMPRA ENTRA (ex: "quando fecha a fatura do Inter?", "se eu comprar dia 1 cai em qual fatura?", "qual meu melhor dia de compra?"):
+   - "action": "answer", "data": null
+   - Consulte os dados do cartão em "VALORES OFICIAIS DAS FATURAS DE CARTÃO DE CRÉDITO".
+   - Explique claramente:
+     * O cartão fecha no dia cadastrado e vence no dia cadastrado.
+     * Uma compra feita no dia 1 (antes do fechamento) entra na fatura que fecha neste mês e será paga no vencimento do mês seguinte.
+     * Compras feitas a partir do dia do fechamento só entram na fatura subsequente, dando até 40 dias para pagar.
+   - Responda de forma prestativa, clara e natural.
+
+3. PERGUNTAS SOBRE GASTOS GERAIS OU COMPRAS FEITAS NO MÊS (ex: "quanto gastei esse mês?", "quanto gastei com combustível?"):
    - "action": "answer", "data": null
    - Some os lançamentos do histórico cuja data inicie em "${currentMonthPrefix}".
    - "despesa" representa saídas/gastos. "receita" representa entradas/ganhos.

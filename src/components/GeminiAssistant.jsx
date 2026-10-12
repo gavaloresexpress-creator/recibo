@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Mic, MicOff, Loader, MessageSquare } from "lucide-react";
+import { getInvoiceMonth } from "../utils/format";
 
-export default function GeminiAssistant({ expenses, categories, cards, addExpense }) {
+export default function GeminiAssistant({ expenses, categories, cards, paidInvoices, addExpense }) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -66,7 +67,7 @@ export default function GeminiAssistant({ expenses, categories, cards, addExpens
       const res = await fetch("/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, categories, cards, expenses, clientDate }),
+        body: JSON.stringify({ text, categories, cards, expenses, paidInvoices, clientDate }),
       });
 
       const parsed = await res.json();
@@ -99,16 +100,9 @@ export default function GeminiAssistant({ expenses, categories, cards, addExpens
         parsed.data.notas = (parsed.data.notas && parsed.data.notas.trim()) ? parsed.data.notas.trim() : "Via Assistente IA";
         parsed.data.mesInicioParcelas = null;
 
-        // Calcula mês da fatura se for crédito
+        // Calcula mês da fatura se for crédito usando a regra oficial do app
         if (parsed.data.formaPagamento === "credito" && parsed.data.tipo === "despesa" && cObj) {
-          const [ano, mes, dia] = parsed.data.data.split("-").map(Number);
-          let faturaMes = mes;
-          let faturaAno = ano;
-          if (dia >= (cObj.fechamento || 25)) {
-            faturaMes++;
-            if (faturaMes > 12) { faturaMes = 1; faturaAno++; }
-          }
-          parsed.data.mesInicioParcelas = `${faturaAno}-${String(faturaMes).padStart(2, "0")}`;
+          parsed.data.mesInicioParcelas = getInvoiceMonth(parsed.data.data, cObj);
         }
 
         await addExpense(parsed.data);
