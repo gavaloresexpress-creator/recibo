@@ -53,38 +53,37 @@ Retorne APENAS um objeto JSON válido (sem markdown, sem texto adicional):
 
 Regras: preencha "data" apenas se action for "add_expense", caso contrário coloque null. Para perguntas, calcule com os dados fornecidos.`;
 
-    // Tenta modelos em ordem até encontrar um disponível para esta chave
+    // Modelos ordenados por estabilidade e velocidade, com fallback automático
     const models = [
-      "gemini-3.8-flash",
-      "gemini-flash-latest",
-      "gemini-3.7-flash",
+      "gemini-3.5-flash-lite",
       "gemini-3.5-flash",
-      "gemini-2.5-flash-lite",
-      "gemini-2.0-flash",
-      "gemini-1.5-flash",
-      "gemini-pro",
+      "gemini-3.7-flash",
+      "gemini-flash-latest",
+      "gemini-3.8-flash",
     ];
 
     let geminiRes = null;
-    let lastError = null;
 
     for (const modelName of models) {
-      geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": apiKey,
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" },
-          }),
-        }
-      );
-      if (geminiRes.ok || geminiRes.status !== 404) break;
-      lastError = modelName;
+      try {
+        geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": apiKey,
+            },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseMimeType: "application/json" },
+            }),
+          }
+        );
+        if (geminiRes && geminiRes.ok) break;
+      } catch (err) {
+        console.warn(`Tentativa no modelo ${modelName} falhou:`, err?.message);
+      }
     }
 
     if (!geminiRes.ok) {
