@@ -1,3 +1,57 @@
+function getInvoiceMonth(compraData, cartaoObj) {
+  if (!compraData) return "";
+  if (!cartaoObj) return compraData.slice(0, 7);
+  const [y, m, d] = compraData.split("-").map(Number);
+  const fechamento = cartaoObj.fechamento || 25;
+  const vencimento = cartaoObj.vencimento || 1;
+  let offset = 0;
+  if (vencimento <= fechamento) offset += 1;
+  if (d >= fechamento) offset += 1;
+  const paymentDate = new Date(y, m - 1 + offset, 1);
+  return `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getInstallmentEntries(expense, cards = []) {
+  const isRecurring = expense.isRecurring === true;
+  const parcelas = isRecurring ? 24 : Math.max(1, Number(expense.parcelas) || 1);
+  const valorParcela = isRecurring ? Number(expense.valor) : Number(expense.valor) / parcelas;
+  let startY, startM;
+  const isCredit = expense.formaPagamento === "credito" || (!expense.formaPagamento && expense.cartao);
+  if (expense.mesInicioParcelas) {
+    [startY, startM] = expense.mesInicioParcelas.split("-").map(Number);
+  } else if (isCredit && expense.cartao && (expense.data || expense.date)) {
+    const expDate = expense.data || expense.date;
+    const cardObj = cards.find((c) =>
+      typeof c === "object" ? c.id === expense.cartao || c.name === expense.cartao : c === expense.cartao
+    );
+    const invoiceMonth = getInvoiceMonth(expDate, cardObj);
+    [startY, startM] = invoiceMonth.split("-").map(Number);
+  } else if (expense.data || expense.date) {
+    const expDate = expense.data || expense.date;
+    [startY, startM] = expDate.split("-").map(Number);
+  } else {
+    return [];
+  }
+
+  const entries = [];
+  for (let i = 0; i < parcelas; i++) {
+    const dt = new Date(startY, startM - 1 + i, 1);
+    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    if (isRecurring && expense.endMonth && key > expense.endMonth) continue;
+    entries.push({
+      key,
+      value: valorParcela,
+      descricao: expense.descricao,
+      cartao: expense.cartao,
+      id: expense.id,
+      tipo: expense.tipo || "despesa",
+      installmentIndex: i + 1,
+      totalInstallments: isRecurring ? "∞" : parcelas,
+    });
+  }
+  return entries;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -17,6 +71,10 @@ export default async function handler(req, res) {
     const today = clientDate || new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
     const currentMonthPrefix = today.slice(0, 7); // ex: "2026-10"
 
+    const [curY, curM] = currentMonthPrefix.split("-").map(Number);
+    const nextMonthDt = new Date(curY, curM, 1);
+    const nextMonthPrefix = `${nextMonthDt.getFullYear()}-${String(nextMonthDt.getMonth() + 1).padStart(2, "0")}`;
+
     const categoryNames = (categories || []).map((c) => c.label).join(", ");
     const cardNames = (cards || []).map((c) => (typeof c === "object" ? c.name : c)).join(", ");
 
@@ -24,6 +82,52 @@ export default async function handler(req, res) {
     const cardMap = Object.fromEntries(
       (cards || []).map((c) => [typeof c === "object" ? c.id : c, typeof c === "object" ? c.name : c])
     );
+
+    // Calcula os valores EXATOS das faturas por cartão (idêntico à tela Faturas do app)
+    const cardInvoices = (cards || []).map((card) => {
+      const id = typeof card === "object" ? card.id : card;
+      const name = typeof card === "object" ? card.name : card;
+      const fechamento = typeof card === "object" ? card.fechamento || 25 : 25;
+      const vencimento = typeof card === "object" ? card.vencimento || 1 : 1;
+
+      let totalFaturaAtual = 0;
+      let totalFaturaProxima = 0;
+      const itensFaturaAtual = [];
+
+      (expenses || []).forEach((exp) => {
+        if (exp.cartao !== id && exp.cartao !== name) return;
+        const entries = getInstallmentEntries(exp, cards);
+        entries.forEach((e) => {
+          if (e.tipo === "receita") return;
+          if (e.key === currentMonthPrefix) {
+            totalFaturaAtual += e.value;
+            itensFaturaAtual.push({
+              descricao: exp.descricao,
+              valorParcela: Math.round(e.value * 100) / 100,
+              parcela: `${e.installmentIndex}/${e.totalInstallments}`,
+              dataCompra: exp.data || exp.date,
+            });
+          } else if (e.key === nextMonthPrefix) {
+            totalFaturaProxima += e.value;
+          }
+        });
+      });
+
+      return {
+        cartao: name,
+        fechamento: `dia ${fechamento}`,
+        vencimento: `dia ${vencimento}`,
+        faturaAtual: {
+          mes: currentMonthPrefix,
+          total: Math.round(totalFaturaAtual * 100) / 100,
+          itens: itensFaturaAtual,
+        },
+        faturaProximoMes: {
+          mes: nextMonthPrefix,
+          total: Math.round(totalFaturaProxima * 100) / 100,
+        },
+      };
+    });
 
     // Mapeia os lançamentos tratando tanto 'data' quanto 'date'
     const recentExpenses = (expenses || []).map((e) => {
@@ -41,29 +145,42 @@ export default async function handler(req, res) {
       };
     });
 
-    const prompt = `Você é um assistente financeiro inteligente e preciso de um aplicativo chamado "Recibo".
+    const prompt = `Você é um assistente financeiro inteligente e preciso do aplicativo "Recibo".
 O usuário disse o seguinte comando ou pergunta por voz: "${text}"
 
 CONTEXTO DO USUÁRIO:
 - Data de hoje: ${today} (formato YYYY-MM-DD)
 - Mês atual: ${currentMonthPrefix}
+- Próximo mês: ${nextMonthPrefix}
 - Categorias disponíveis: ${categoryNames}
-- Cartões disponíveis: ${cardNames}
-- Histórico de lançamentos cadastrados (${recentExpenses.length} transações):
+- Cartões cadastrados: ${cardNames}
+
+VALORES OFICIAIS DAS FATURAS DE CARTÃO DE CRÉDITO (calculados com base no fechamento e parcelamentos do app):
+${JSON.stringify(cardInvoices, null, 2)}
+
+HISTÓRICO DE LANÇAMENTOS CADASTRADOS (${recentExpenses.length} transações):
 ${JSON.stringify(recentExpenses)}
 
-INSTRUÇÕES CRÍTICAS:
-1. CONSULTAS E PERGUNTAS (ex: "quanto gastei...", "quanto sobrou...", "qual foi o valor de...", "quantos reais tive de gasto..."):
-   - "action": "answer"
-   - "data": null
-   - Verifique cuidadosamente a lista de lançamentos fornecida acima.
-   - Para perguntas sobre o mês atual ou "esse mês", filtre lançamentos cuja "data" comece com "${currentMonthPrefix}".
-   - "despesa" representa saídas/gastos. "receita" representa entradas/ganhos.
-   - Calcule a soma com exatidão e responda no campo "message" de forma curta, natural e amigável em português, informando o valor formatado em Reais (ex: R$ 1.250,00).
+INSTRUÇÕES CRÍTICAS PARA RESPOSTAS:
+1. PERGUNTAS SOBRE "FATURA" DE CARTÃO (ex: "quanto está minha fatura do Inter?", "qual o valor da fatura?", "fatura do cartão"):
+   - "action": "answer", "data": null
+   - Use EXCLUSIVAMENTE o bloco "VALORES OFICIAIS DAS FATURAS DE CARTÃO DE CRÉDITO" acima!
+   - O valor da fatura do cartão para o mês atual (${currentMonthPrefix}) é exatamente o campo "faturaAtual.total" daquele cartão.
+   - NUNCA some transações soltas para deduzir o valor da fatura, pois a fatura depende do dia de fechamento do cartão e de parcelas anteriores.
+   - Responda de forma clara, informando o valor exato da fatura do mês atual em Reais (ex: "Sua fatura do cartão Inter para este mês é de R$ X,XX").
+   - Se o usuário perguntar da próxima fatura ou do próximo mês (${nextMonthPrefix}), use "faturaProximoMes.total".
 
-2. CADASTRO DE GASTO OU RECEITA (ex: "gastei 50 na padaria no débito", "recebi 200 de pix"):
+2. PERGUNTAS SOBRE GASTOS GERAIS OU COMPRAS FEITAS NO MÊS (ex: "quanto gastei esse mês?", "quanto gastei com combustível?"):
+   - "action": "answer", "data": null
+   - Some os lançamentos do histórico cuja data inicie em "${currentMonthPrefix}".
+   - "despesa" representa saídas/gastos. "receita" representa entradas/ganhos.
+   - Responda informando o total com exatidão em Reais.
+
+3. CADASTRO DE GASTO OU RECEITA (ex: "gastei 50 na padaria no débito com nota pão e queijo", "gastei 34,90 de ferragista com nota fita de carga", "recebi 138 de pix com nota repasse"):
    - "action": "add_expense"
    - Preencha o objeto "data" com os dados extraídos.
+   - Em "descricao", coloque um título curto e objetivo (ex: "Ferragista", "Padaria", "Bebidas").
+   - Em "notas", capture qualquer detalhe, observação, item específico ou especificação dita pelo usuário (ex: "Fita de carga", "Café e queijo", "Repasse"). Se o usuário não mencionar nenhum detalhe extra, deixe "".
    - Use a data de hoje (${today}) se nenhuma data for mencionada.
    - No campo "message", confirme o lançamento de forma amigável e curta.
 
@@ -73,6 +190,7 @@ Retorne APENAS um objeto JSON válido (sem markdown, sem texto fora do JSON):
   "data": {
     "valor": (número, ex: 50.5),
     "descricao": (string, título curto),
+    "notas": (string, observação/detalhe especificado pelo usuário, ou "" se não houver),
     "categoria": (string, nome de uma das categorias disponíveis, ou "Outros"),
     "cartao": (string, nome de um dos cartões, ou "" se não usou crédito),
     "formaPagamento": (string: "credito", "debito", "pix" ou "dinheiro"),

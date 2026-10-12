@@ -96,7 +96,7 @@ export default function GeminiAssistant({ expenses, categories, cards, addExpens
         // Campos obrigatórios
         parsed.data.isRecurring = false;
         parsed.data.parcelas = 1;
-        parsed.data.notas = "Via Assistente IA";
+        parsed.data.notas = (parsed.data.notas && parsed.data.notas.trim()) ? parsed.data.notas.trim() : "Via Assistente IA";
         parsed.data.mesInicioParcelas = null;
 
         // Calcula mês da fatura se for crédito
