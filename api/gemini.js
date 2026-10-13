@@ -147,65 +147,199 @@ export default async function handler(req, res) {
       };
     });
 
-    // Mapeia os lançamentos tratando tanto 'data' quanto 'date'
+    function round2(v) {
+      return Math.round((Number(v) || 0) * 100) / 100;
+    }
+
+    // Mês anterior (para comparações históricas)
+    const [curY, curM] = currentMonthPrefix.split("-").map(Number);
+    const prevMonthDt = new Date(curY, curM - 2, 1);
+    const prevMonthPrefix = `${prevMonthDt.getFullYear()}-${String(prevMonthDt.getMonth() + 1).padStart(2, "0")}`;
+
+    // RESUMO MATEMÁTICO DO MÊS ATUAL (100% exato via código)
+    const resumoMesAtual = {
+      mes: currentMonthPrefix,
+      totalGastoDespesas: 0,
+      totalReceitas: 0,
+      saldo: 0,
+      totaisPorCategoria: {},
+      totaisPorFormaPagamento: {},
+      totaisPorCartao: {},
+      maioresDespesas: [],
+    };
+
+    // RESUMO MATEMÁTICO DO MÊS ANTERIOR
+    const resumoMesAnterior = {
+      mes: prevMonthPrefix,
+      totalGastoDespesas: 0,
+      totalReceitas: 0,
+      totaisPorCategoria: {},
+    };
+
+    // RESUMO GERAL HISTÓRICO
+    const resumoGeralHistorico = {
+      totalGastoDespesas: 0,
+      totalReceitas: 0,
+      totaisPorCategoria: {},
+    };
+
+    // Mapeia e totaliza cada transação
     const recentExpenses = (expenses || []).map((e) => {
       const expDate = e.data || e.date || "";
       const catLabel = catMap[e.categoria] || e.categoria || "Outros";
       const cardName = cardMap[e.cartao] || e.cartao || "";
+      const val = round2(e.valor);
+      const tipo = e.tipo === "receita" ? "receita" : "despesa";
+      const forma = e.formaPagamento || "outros";
+
+      // 1. Acúmulo Geral Histórico
+      if (tipo === "receita") {
+        resumoGeralHistorico.totalReceitas = round2(resumoGeralHistorico.totalReceitas + val);
+      } else {
+        resumoGeralHistorico.totalDespesas = round2(resumoGeralHistorico.totalDespesas + val);
+        resumoGeralHistorico.totaisPorCategoria[catLabel] = round2(
+          (resumoGeralHistorico.totaisPorCategoria[catLabel] || 0) + val
+        );
+      }
+
+      // 2. Acúmulo Mês Atual
+      if (expDate.startsWith(currentMonthPrefix)) {
+        if (tipo === "receita") {
+          resumoMesAtual.totalReceitas = round2(resumoMesAtual.totalReceitas + val);
+        } else {
+          resumoMesAtual.totalGastoDespesas = round2(resumoMesAtual.totalGastoDespesas + val);
+
+          if (!resumoMesAtual.totaisPorCategoria[catLabel]) {
+            resumoMesAtual.totaisPorCategoria[catLabel] = {
+              total: 0,
+              quantidade: 0,
+              itens: [],
+            };
+          }
+          resumoMesAtual.totaisPorCategoria[catLabel].total = round2(
+            resumoMesAtual.totaisPorCategoria[catLabel].total + val
+          );
+          resumoMesAtual.totaisPorCategoria[catLabel].quantidade += 1;
+          resumoMesAtual.totaisPorCategoria[catLabel].itens.push({
+            desc: e.descricao || "",
+            valor: val,
+            data: expDate,
+            forma,
+            cartao: cardName,
+          });
+
+          resumoMesAtual.totaisPorFormaPagamento[forma] = round2(
+            (resumoMesAtual.totaisPorFormaPagamento[forma] || 0) + val
+          );
+
+          if (cardName) {
+            resumoMesAtual.totaisPorCartao[cardName] = round2(
+              (resumoMesAtual.totaisPorCartao[cardName] || 0) + val
+            );
+          }
+
+          resumoMesAtual.maioresDespesas.push({
+            desc: e.descricao || "",
+            valor: val,
+            cat: catLabel,
+            data: expDate,
+          });
+        }
+      }
+
+      // 3. Acúmulo Mês Anterior
+      if (expDate.startsWith(prevMonthPrefix)) {
+        if (tipo === "receita") {
+          resumoMesAnterior.totalReceitas = round2(resumoMesAnterior.totalReceitas + val);
+        } else {
+          resumoMesAnterior.totalGastoDespesas = round2(resumoMesAnterior.totalGastoDespesas + val);
+          resumoMesAnterior.totaisPorCategoria[catLabel] = round2(
+            (resumoMesAnterior.totaisPorCategoria[catLabel] || 0) + val
+          );
+        }
+      }
+
       return {
         data: expDate,
         desc: e.descricao || "",
         cat: catLabel,
         cartao: cardName,
-        forma: e.formaPagamento || "",
-        valor: Number(e.valor) || 0,
-        tipo: e.tipo || "despesa",
+        forma,
+        valor: val,
+        tipo,
       };
     });
 
-    const prompt = `Você é um assistente financeiro inteligente e preciso do aplicativo "Recibo".
+    resumoMesAtual.saldo = round2(resumoMesAtual.totalReceitas - resumoMesAtual.totalGastoDespesas);
+    resumoMesAtual.maioresDespesas.sort((a, b) => b.valor - a.valor);
+    resumoMesAtual.maioresDespesas = resumoMesAtual.maioresDespesas.slice(0, 5);
+
+    const prompt = `Você é um assistente financeiro inteligente e matematicamente rigoroso do aplicativo "Recibo".
 O usuário disse o seguinte comando ou pergunta por voz: "${text}"
 
 CONTEXTO DO USUÁRIO:
 - Data de hoje: ${today} (formato YYYY-MM-DD)
 - Mês atual: ${currentMonthPrefix}
+- Mês anterior: ${prevMonthPrefix}
 - Categorias disponíveis: ${categoryNames}
 - Cartões cadastrados: ${cardNames}
+
+RESUMO FINANCEIRO MATEMATICAMENTE EXATO DO MÊS ATUAL (${currentMonthPrefix}):
+(Pré-calculado sem erros aritméticos com base nas transações reais):
+${JSON.stringify(resumoMesAtual, null, 2)}
+
+RESUMO DO MÊS ANTERIOR (${prevMonthPrefix}):
+${JSON.stringify(resumoMesAnterior, null, 2)}
+
+RESUMO GERAL HISTÓRICO:
+${JSON.stringify(resumoGeralHistorico, null, 2)}
 
 VALORES OFICIAIS DAS FATURAS DE CARTÃO DE CRÉDITO:
 ${JSON.stringify(cardInvoices, null, 2)}
 
-HISTÓRICO DE LANÇAMENTOS CADASTRADOS (${recentExpenses.length} transações):
+HISTÓRICO COMPLETO DE LANÇAMENTOS CADASTRADOS (${recentExpenses.length} transações):
 ${JSON.stringify(recentExpenses)}
 
-INSTRUÇÕES CRÍTICAS PARA RESPOSTAS:
-1. PERGUNTAS SOBRE "FATURA ATUAL" OU "FATURA DO CARTÃO" (ex: "em quantos reais está minha fatura atual?", "quanto está minha fatura no cartão Inter?", "quanto tenho de fatura?"):
+INSTRUÇÕES CRÍTICAS PARA RESPOSTAS COM EXATIDÃO MÁXIMA:
+1. PERGUNTAS SOBRE TOTAIS DE CATEGORIAS, GASTOS DO MÊS, SALDO OU FORMAS DE PAGAMENTO:
    - "action": "answer", "data": null
-   - REGRA DE OURO: Quando o usuário pergunta pela sua "fatura atual", ele está se referindo à FATURA ABERTA ATUAL ("faturaAbertaAtual"), que acumula as compras deste mês e será paga no mês que vem!
-   - A fatura anterior que venceu no início deste mês geralmente já foi paga.
+   - REGRA DE OURO: Use SEMPRE os números exatos do bloco "RESUMO FINANCEIRO MATEMATICAMENTE EXATO DO MÊS ATUAL". NUNCA tente somar de cabeça itens avulsos.
+   - Exemplos de respostas exatas:
+     * "quanto gastei com [categoria]?" (ex: alimentação, combustível, educação, outros):
+       Consulte "resumoMesAtual.totaisPorCategoria[categoria].total". Se a categoria tiver gastos, informe o valor exato pré-calculado e, se conveniente, mencione os itens e suas quantidades. Se a categoria não tiver gastos, diga: "Você ainda não registrou gastos na categoria X este mês."
+     * "quanto gastei no total este mês?" ou "qual o total de gastos?":
+       Use exatamente "resumoMesAtual.totalGastoDespesas".
+     * "quanto recebi este mês?" ou "minhas receitas":
+       Use exatamente "resumoMesAtual.totalReceitas".
+     * "qual meu saldo?" ou "quanto sobrou?":
+       Use exatamente "resumoMesAtual.saldo".
+     * "quanto gastei no débito / pix / crédito?":
+       Consulte "resumoMesAtual.totaisPorFormaPagamento".
+     * "qual foi minha maior despesa?":
+       Consulte "resumoMesAtual.maioresDespesas".
+     * "gastei mais que no mês passado?":
+       Compare "resumoMesAtual.totalGastoDespesas" com "resumoMesAnterior.totalGastoDespesas".
+
+2. PERGUNTAS SOBRE ITENS ESPECÍFICOS POR NOME (ex: "quanto gastei na padaria?", "quanto paguei na faculdade?"):
+   - "action": "answer", "data": null
+   - Se for uma despesa específica, localize-a no histórico e informe o valor exato registrado e a data.
+
+3. PERGUNTAS SOBRE "FATURA ATUAL" OU "FATURA DO CARTÃO":
+   - "action": "answer", "data": null
+   - REGRA: Quando o usuário pergunta pela sua "fatura atual", ele está se referindo à FATURA ABERTA ATUAL ("faturaAbertaAtual"), que acumula as compras deste mês e será paga no mês que vem!
    - Responda informando com clareza o valor da FATURA ABERTA ATUAL (campo "faturaAbertaAtual.total"). Exemplo: "Sua fatura atual do cartão Inter (a ser paga no mês que vem) está em R$ X,XX."
    - Se a fatura anterior com vencimento neste mês constar como "PAGA", você pode complementar amigavelmente: "A fatura anterior deste mês já consta como paga."
 
-2. PERGUNTAS SOBRE FECHAMENTO, VENCIMENTO OU EM QUAL FATURA UMA COMPRA ENTRA (ex: "quando fecha a fatura do Inter?", "se eu comprar dia 1 cai em qual fatura?", "qual meu melhor dia de compra?"):
+4. PERGUNTAS SOBRE FECHAMENTO, VENCIMENTO OU EM QUAL FATURA UMA COMPRA ENTRA:
    - "action": "answer", "data": null
    - Consulte os dados do cartão em "VALORES OFICIAIS DAS FATURAS DE CARTÃO DE CRÉDITO".
-   - Explique claramente:
-     * O cartão fecha no dia cadastrado e vence no dia cadastrado.
-     * Uma compra feita no dia 1 (antes do fechamento) entra na fatura que fecha neste mês e será paga no vencimento do mês seguinte.
-     * Compras feitas a partir do dia do fechamento só entram na fatura subsequente, dando até 40 dias para pagar.
-   - Responda de forma prestativa, clara e natural.
+   - Explique claramente o dia de fechamento e o dia de vencimento, e se compras antes/depois do fechamento caem nesta fatura ou na seguinte.
 
-3. PERGUNTAS SOBRE GASTOS GERAIS OU COMPRAS FEITAS NO MÊS (ex: "quanto gastei esse mês?", "quanto gastei com combustível?"):
-   - "action": "answer", "data": null
-   - Some os lançamentos do histórico cuja data inicie em "${currentMonthPrefix}".
-   - "despesa" representa saídas/gastos. "receita" representa entradas/ganhos.
-   - Responda informando o total com exatidão em Reais.
-
-3. CADASTRO DE GASTO OU RECEITA (ex: "gastei 50 na padaria no débito com nota pão e queijo", "gastei 34,90 de ferragista com nota fita de carga", "recebi 138 de pix com nota repasse"):
+5. CADASTRO DE GASTO OU RECEITA:
    - "action": "add_expense"
    - Preencha o objeto "data" com os dados extraídos.
    - Em "descricao", coloque um título curto e objetivo (ex: "Ferragista", "Padaria", "Bebidas").
-   - Em "notas", capture qualquer detalhe, observação, item específico ou especificação dita pelo usuário (ex: "Fita de carga", "Café e queijo", "Repasse"). Se o usuário não mencionar nenhum detalhe extra, deixe "".
+   - Em "notas", capture qualquer detalhe, observação ou especificação dita pelo usuário. Se não houver, deixe "".
    - Use a data de hoje (${today}) se nenhuma data for mencionada.
    - No campo "message", confirme o lançamento de forma amigável e curta.
 
