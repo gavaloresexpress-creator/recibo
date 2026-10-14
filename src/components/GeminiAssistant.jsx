@@ -1,15 +1,29 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Mic, MicOff, Loader, MessageSquare } from "lucide-react";
+import { Mic, MicOff, Loader, MessageSquare, Send } from "lucide-react";
 import { getInvoiceMonth } from "../utils/format";
 
 export default function GeminiAssistant({ expenses, categories, cards, paidInvoices, addExpense }) {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [textInput, setTextInput] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isOpen, setIsOpen] = useState(false);
 
   const recognitionRef = useRef(null);
+
+  // Refs para sempre ter o estado mais atualizado dentro de callbacks (resolve stale closure)
+  const expensesRef = useRef(expenses);
+  const categoriesRef = useRef(categories);
+  const cardsRef = useRef(cards);
+  const paidInvoicesRef = useRef(paidInvoices);
+  const addExpenseRef = useRef(addExpense);
+
+  useEffect(() => { expensesRef.current = expenses; }, [expenses]);
+  useEffect(() => { categoriesRef.current = categories; }, [categories]);
+  useEffect(() => { cardsRef.current = cards; }, [cards]);
+  useEffect(() => { paidInvoicesRef.current = paidInvoices; }, [paidInvoices]);
+  useEffect(() => { addExpenseRef.current = addExpense; }, [addExpense]);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -26,12 +40,17 @@ export default function GeminiAssistant({ expenses, categories, cards, paidInvoi
       recognition.onresult = (event) => {
         const result = event.results[event.resultIndex][0].transcript;
         setTranscript(result);
-        handleVoiceCommand(result);
+        handleCommand(result);
       };
 
-      recognition.onerror = () => {
+      recognition.onerror = (e) => {
         setIsListening(false);
-        setFeedback("Erro ao ouvir. Tente novamente.");
+        const msg = e.error === "not-allowed"
+          ? "Permissão de microfone negada."
+          : e.error === "network"
+          ? "Erro de rede no reconhecimento de voz."
+          : "Erro ao ouvir. Tente digitar abaixo.";
+        setFeedback(msg);
       };
 
       recognition.onend = () => {
@@ -44,7 +63,7 @@ export default function GeminiAssistant({ expenses, categories, cards, paidInvoi
 
   const toggleListen = () => {
     if (!recognitionRef.current) {
-      setFeedback("Seu navegador não suporta reconhecimento de voz.");
+      setFeedback("Seu navegador não suporta reconhecimento de voz. Use o campo de texto abaixo.");
       return;
     }
     if (isListening) {
@@ -52,22 +71,38 @@ export default function GeminiAssistant({ expenses, categories, cards, paidInvoi
     } else {
       setTranscript("");
       setFeedback("");
-      recognitionRef.current.start();
+      try {
+        recognitionRef.current.start();
+      } catch (e) {
+        setFeedback("Não foi possível iniciar o microfone. Use o campo de texto abaixo.");
+      }
     }
   };
 
-  const handleVoiceCommand = async (text) => {
-    if (!text) return;
+  const handleCommand = async (text) => {
+    if (!text || !text.trim()) return;
     setIsProcessing(true);
     setFeedback("Pensando...");
 
+    // Usa os refs para garantir dados sempre frescos (resolve stale closure)
+    const currentExpenses = expensesRef.current;
+    const currentCategories = categoriesRef.current;
+    const currentCards = cardsRef.current;
+    const currentPaidInvoices = paidInvoicesRef.current;
+
     try {
-      // Chama o nosso servidor seguro (api/gemini.js), nunca o Gemini diretamente
       const clientDate = new Date().toLocaleDateString("en-CA");
       const res = await fetch("/api/gemini", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, categories, cards, expenses, paidInvoices, clientDate }),
+        body: JSON.stringify({
+          text: text.trim(),
+          categories: currentCategories,
+          cards: currentCards,
+          expenses: currentExpenses,
+          paidInvoices: currentPaidInvoices,
+          clientDate,
+        }),
       });
 
       const parsed = await res.json();
@@ -78,15 +113,15 @@ export default function GeminiAssistant({ expenses, categories, cards, paidInvoi
 
       if (parsed.action === "add_expense" && parsed.data) {
         // Mapeia categoria: nome → key
-        const catObj = categories.find(
+        const catObj = currentCategories.find(
           (c) => c.label.toLowerCase() === (parsed.data.categoria || "").toLowerCase()
         );
-        parsed.data.categoria = catObj ? catObj.key : (categories[0]?.key || "outros");
+        parsed.data.categoria = catObj ? catObj.key : (currentCategories[0]?.key || "outros");
 
         // Mapeia cartão: nome → id
         let cObj = null;
         if (parsed.data.cartao) {
-          cObj = cards.find((c) => {
+          cObj = currentCards.find((c) => {
             const name = typeof c === "string" ? c : c.name;
             return name.toLowerCase() === parsed.data.cartao.toLowerCase();
           });
@@ -105,23 +140,36 @@ export default function GeminiAssistant({ expenses, categories, cards, paidInvoi
           parsed.data.mesInicioParcelas = getInvoiceMonth(parsed.data.data, cObj);
         }
 
-        await addExpense(parsed.data);
+        await addExpenseRef.current(parsed.data);
       }
 
       setFeedback(parsed.message || "Feito!");
+      setTextInput("");
 
       // Resposta em voz
       if ("speechSynthesis" in window && parsed.message) {
-        const utterance = new SpeechSynthesisUtterance(parsed.message);
-        utterance.lang = "pt-BR";
-        window.speechSynthesis.speak(utterance);
+        try {
+          window.speechSynthesis.cancel(); // Para qualquer fala anterior
+          const utterance = new SpeechSynthesisUtterance(parsed.message);
+          utterance.lang = "pt-BR";
+          window.speechSynthesis.speak(utterance);
+        } catch (speechErr) {
+          console.warn("speechSynthesis error:", speechErr);
+        }
       }
     } catch (e) {
-      console.error(e);
+      console.error("Assistant error:", e);
       setFeedback(e.message || "Ocorreu um erro. Tente novamente.");
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleTextSubmit = (e) => {
+    e.preventDefault();
+    if (!textInput.trim() || isProcessing) return;
+    setTranscript(textInput.trim());
+    handleCommand(textInput.trim());
   };
 
   return (
@@ -187,7 +235,7 @@ export default function GeminiAssistant({ expenses, categories, cards, paidInvoi
           </div>
 
           <p style={{ fontSize: "12px", color: "var(--text-dim)", lineHeight: "1.5", margin: 0 }}>
-            Toque no microfone e diga algo como:<br />
+            Fale ou digite um comando:<br />
             <em>"Gastei R$ 30 de padaria no crédito"</em> ou <em>"Quanto gastei com mercado?"</em>
           </p>
 
@@ -215,7 +263,8 @@ export default function GeminiAssistant({ expenses, categories, cards, paidInvoi
           {feedback && (
             <p style={{
               fontSize: "12px",
-              color: feedback.startsWith("Erro") ? "var(--rust)" : "var(--sage)",
+              color: (feedback.startsWith("Erro") || feedback.startsWith("Permissão") || feedback.startsWith("Não foi"))
+                ? "var(--rust)" : "var(--sage)",
               textAlign: "center",
               fontWeight: "600",
               margin: 0,
@@ -247,6 +296,45 @@ export default function GeminiAssistant({ expenses, categories, cards, paidInvoi
               {isProcessing ? <Loader size={24} className="spin" /> : isListening ? <MicOff size={24} /> : <Mic size={24} />}
             </button>
           </div>
+          {/* Input de texto (fallback e alternativa ao microfone) */}
+          <form onSubmit={handleTextSubmit} style={{ display: "flex", gap: "8px" }}>
+            <input
+              type="text"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Ou digite aqui..."
+              disabled={isProcessing}
+              style={{
+                flex: 1,
+                background: "var(--overlay-dark)",
+                border: "1px solid var(--border)",
+                borderRadius: "8px",
+                padding: "8px 12px",
+                color: "var(--text)",
+                fontSize: "13px",
+                outline: "none",
+              }}
+            />
+            <button
+              type="submit"
+              disabled={isProcessing || !textInput.trim()}
+              style={{
+                background: "var(--gold)",
+                border: "none",
+                borderRadius: "8px",
+                padding: "8px 10px",
+                color: "var(--bg-dark)",
+                cursor: isProcessing || !textInput.trim() ? "not-allowed" : "pointer",
+                opacity: isProcessing || !textInput.trim() ? 0.5 : 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "opacity 0.2s",
+              }}
+            >
+              <Send size={16} />
+            </button>
+          </form>
         </div>
       )}
     </>

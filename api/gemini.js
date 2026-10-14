@@ -363,8 +363,8 @@ Retorne APENAS um objeto JSON válido (sem markdown, sem texto fora do JSON):
     const models = [
       "gemini-3.5-flash-lite",
       "gemini-3.5-flash",
-      "gemini-3.7-flash",
       "gemini-flash-latest",
+      "gemini-3.7-flash",
       "gemini-3.8-flash",
     ];
 
